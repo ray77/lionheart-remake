@@ -15,3 +15,5 @@ org.sonar.ide.eclipse.core.prefs
 .sonar
 .lionengine
 built-jar.properties
+# macOS
+.DS_Store

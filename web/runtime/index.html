@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><title>Lionheart im Browser</title>
+<style>
+body{background:#0b0d1a;color:#e7ecff;font-family:system-ui;padding:12px;margin:0}
+#out{font:12px ui-monospace,monospace;color:#7dffa0;line-height:1.4;max-height:90px;overflow:auto}
+#err{font:12px ui-monospace,monospace;color:#ff9090;line-height:1.4;max-height:90px;overflow:auto;margin:6px 0}
+canvas{image-rendering:pixelated;background:#000;border:1px solid #22d3ee44}
+</style></head>
+<body>
+<div id="out"></div>
+<div id="err"></div>
+<canvas id="lionengine" width="640" height="480"></canvas>
+<script>
+  // Nur die Fehler DIESER Runde anzeigen
+  (function(){
+    var box = document.getElementById('err');
+    var orig = console.error.bind(console);
+    console.error = function(){
+      var line = document.createElement('div');
+      line.textContent = Array.prototype.join.call(arguments, ' ').substring(0, 220);
+      box.appendChild(line);
+      orig.apply(null, arguments);
+    };
+    window.addEventListener('error', function(e){
+      var line = document.createElement('div');
+      line.textContent = 'JS: ' + e.message;
+      box.appendChild(line);
+      var st = document.createElement('pre');
+      st.id = 'stack';
+      st.style.cssText = 'font:11px monospace;color:#ffd090;white-space:pre-wrap';
+      st.textContent = (e.error && e.error.stack) || '(kein Stapel)';
+      box.appendChild(st);
+    });
+  })();
+</script>
+<script src="sc68.js"></script>
+<script src="sc68player.js"></script>
+<script src="classes.js"></script><script>main();</script>
+</body></html>

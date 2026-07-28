@@ -20,8 +20,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.b3dgs.lionengine.Logger;
+import com.b3dgs.lionengine.LoggerFactory;
 
 import com.b3dgs.lionengine.Align;
 import com.b3dgs.lionengine.Context;

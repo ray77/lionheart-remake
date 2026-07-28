@@ -40,6 +40,9 @@ public final class Constant
     /** Game resolution. */
     public static final Resolution RESOLUTION_GAME = new Resolution(278, 208, RESOLUTION.rate());
     /** Resolution. */
+    /* Web build: render 1:1 at game resolution and let the browser scale the
+     * canvas. The software scaler (RawScale/CrtScale) is the single biggest
+     * cost under CheerpJ. */
     public static final Resolution RESOLUTION_OUTPUT = new Resolution(640, 480, RESOLUTION.rate());
 
     /** Debug collisions flag. */

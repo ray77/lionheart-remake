@@ -39,8 +39,8 @@ import java.util.logging.LogManager;
 import java.util.logging.LogRecord;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.b3dgs.lionengine.Logger;
+import com.b3dgs.lionengine.LoggerFactory;
 
 import com.b3dgs.lionengine.AttributesReader;
 import com.b3dgs.lionengine.LionEngineException;

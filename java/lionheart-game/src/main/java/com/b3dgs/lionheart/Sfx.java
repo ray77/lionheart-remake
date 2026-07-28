@@ -20,13 +20,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.b3dgs.lionengine.Logger;
+import com.b3dgs.lionengine.LoggerFactory;
 
 import com.b3dgs.lionengine.Media;
 import com.b3dgs.lionengine.Medias;
@@ -159,16 +157,10 @@ public enum Sfx
     private static final int MAX_PARALLEL_CACHE = 3;
     private static final List<Sfx> TO_CACHE = new ArrayList<>(Arrays.asList(Sfx.values()));
 
-    private static final ExecutorService EXECUTOR;
     /** Logger. */
     private static final Logger LOGGER = LoggerFactory.getLogger(Sfx.class);
 
     private static boolean done;
-
-    static
-    {
-        EXECUTOR = Executors.newFixedThreadPool(MAX_PARALLEL_CACHE, r -> new Thread(r, Sfx.class.getSimpleName()));
-    }
 
     /**
      * Cache sfx start.
@@ -183,7 +175,10 @@ public enum Sfx
                 final Sfx sfx = TO_CACHE.get(i);
                 if (!sfx.cached)
                 {
-                    EXECUTOR.execute(createCache(sfx));
+                    /* Browser builds have no threads; the engine abstraction runs this
+                     * in place there and on a pool on desktop. */
+                    final Runnable task = createCache(sfx);
+                    com.b3dgs.lionengine.Parallels.get().forEach(1, index -> task.run());
                 }
             }
         }
@@ -220,23 +215,13 @@ public enum Sfx
     {
         if (!done && !TO_CACHE.isEmpty() && Settings.getInstance().getVolumeSfx() > 0)
         {
-            try
-            {
-                done = true;
-                EXECUTOR.shutdown();
-                EXECUTOR.awaitTermination(TIMEOUT_SEC, TimeUnit.SECONDS);
+            done = true;
 
-                final int volume = Settings.getInstance().getVolumeSfx();
-                if (!TO_CACHE.isEmpty() && volume > 0)
-                {
-                    awaitCaches(volume);
-                    TO_CACHE.clear();
-                }
-            }
-            catch (final InterruptedException exception)
+            final int volume = Settings.getInstance().getVolumeSfx();
+            if (!TO_CACHE.isEmpty() && volume > 0)
             {
-                Thread.currentThread().interrupt();
-                LOGGER.error("Interrupted!", exception);
+                awaitCaches(volume);
+                TO_CACHE.clear();
             }
         }
     }
@@ -270,7 +255,6 @@ public enum Sfx
         if (!done)
         {
             done = true;
-            EXECUTOR.shutdownNow();
         }
     }
 

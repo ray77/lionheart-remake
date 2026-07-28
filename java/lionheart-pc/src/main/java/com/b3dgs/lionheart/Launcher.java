@@ -80,8 +80,8 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.NumberFormatter;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.b3dgs.lionengine.Logger;
+import com.b3dgs.lionengine.LoggerFactory;
 
 import com.b3dgs.lionengine.Engine;
 import com.b3dgs.lionengine.LionEngineException;

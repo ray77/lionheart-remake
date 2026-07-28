@@ -28,8 +28,8 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.b3dgs.lionengine.Logger;
+import com.b3dgs.lionengine.LoggerFactory;
 
 import com.b3dgs.lionengine.Align;
 import com.b3dgs.lionengine.Context;
@@ -62,8 +62,6 @@ import com.b3dgs.lionengine.graphic.drawable.SpriteAnimated;
 import com.b3dgs.lionengine.graphic.drawable.SpriteFont;
 import com.b3dgs.lionengine.graphic.engine.FilterNone;
 import com.b3dgs.lionengine.graphic.engine.Loop;
-import com.b3dgs.lionengine.graphic.engine.LoopHybrid;
-import com.b3dgs.lionengine.graphic.engine.LoopUnlocked;
 import com.b3dgs.lionengine.graphic.engine.ScanlineNone;
 import com.b3dgs.lionengine.graphic.engine.Sequence;
 import com.b3dgs.lionengine.graphic.filter.FilterBlur;
@@ -124,19 +122,26 @@ public final class Util
      * @param desktop The desktop resolution.
      * @return The loop instance.
      */
+    /** Optional loop supplier, installed by platforms with their own pacing. */
+    private static java.util.function.Supplier<Loop> loopSupplier;
+
+    /**
+     * Install the loop used instead of the desktop ones.
+     *
+     * @param supplier The supplier, <code>null</code> to use the desktop loops.
+     */
+    public static synchronized void setLoopSupplier(java.util.function.Supplier<Loop> supplier)
+    {
+        loopSupplier = supplier;
+    }
+
     public static Loop getLoop(Resolution desktop)
     {
-        final Settings settings = Settings.getInstance();
-        final LoopFactory factory;
-        if (settings.isFlagVsync() && !settings.isResolutionWindowed())
+        if (loopSupplier == null)
         {
-            factory = LoopUnlocked::new;
+            throw new com.b3dgs.lionengine.LionEngineException("No loop supplier set, call Util.setLoopSupplier() first");
         }
-        else
-        {
-            factory = LoopHybrid::new;
-        }
-        return factory.create(Constant.RESOLUTION, settings.getResolution(desktop));
+        return loopSupplier.get();
     }
 
     /**

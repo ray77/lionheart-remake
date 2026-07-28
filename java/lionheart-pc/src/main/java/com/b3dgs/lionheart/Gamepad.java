@@ -57,6 +57,8 @@ public class Gamepad implements InputDevice
     private final Map<Integer, Set<Integer>> pressed = new ConcurrentHashMap<>();
     /** Last press number. */
     private final Map<Integer, Integer> last = new ConcurrentHashMap<>();
+    /** Native gamepad backend available. */
+    private boolean available;
     /** Check timing. */
     private final Timing timing = new Timing();
 
@@ -69,9 +71,20 @@ public class Gamepad implements InputDevice
     {
         super();
 
-        if (!GLFW.glfwInit())
+        // Web build: no native GLFW available - run without gamepad support
+        boolean glfwOk;
+        try
         {
-            throw new LionEngineException("Unable to initialize !");
+            glfwOk = GLFW.glfwInit();
+        }
+        catch (Throwable t)
+        {
+            glfwOk = false;
+        }
+        available = glfwOk;
+        if (!glfwOk)
+        {
+            return;
         }
 
         GLFW.glfwSetJoystickCallback(new GLFWJoystickCallback()
@@ -106,6 +119,10 @@ public class Gamepad implements InputDevice
      */
     public final Map<Integer, Integer> findDevices()
     {
+        if (!available)
+        {
+            return jidToIndex;
+        }
         GLFW.glfwPollEvents();
 
         for (int jid = GLFW.GLFW_JOYSTICK_1; jid <= GLFW.GLFW_JOYSTICK_LAST; jid++)
@@ -194,6 +211,10 @@ public class Gamepad implements InputDevice
     @Override
     public void update(double extrp)
     {
+        if (!available)
+        {
+            return;
+        }
         GLFW.glfwPollEvents();
 
         final int n = ids.size();

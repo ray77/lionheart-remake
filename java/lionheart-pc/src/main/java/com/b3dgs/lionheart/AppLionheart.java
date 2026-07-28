@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.b3dgs.lionengine.Logger;
+import com.b3dgs.lionengine.LoggerFactory;
 
 import com.b3dgs.lionengine.Check;
 import com.b3dgs.lionengine.Config;
@@ -137,6 +137,17 @@ final class AppLionheart
         AudioFactory.addFormat(new WavFormat());
         AudioFactory.addFormat(Sc68Format.getFailsafe());
 
+        Util.setLoopSupplier(() ->
+        {
+            final Settings settings = Settings.getInstance();
+            if (settings.isFlagVsync() && !settings.isResolutionWindowed())
+            {
+                return new com.b3dgs.lionengine.graphic.engine.LoopUnlocked(Constant.RESOLUTION,
+                                                                            settings.getResolution(null));
+            }
+            return new com.b3dgs.lionengine.graphic.engine.LoopHybrid(Constant.RESOLUTION,
+                                                                      settings.getResolution(null));
+        });
         Util.init(Tools::generateWorldRaster);
 
         final Settings settings = Settings.getInstance();

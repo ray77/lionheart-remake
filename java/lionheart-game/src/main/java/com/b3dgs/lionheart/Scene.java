@@ -19,8 +19,8 @@ package com.b3dgs.lionheart;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.b3dgs.lionengine.Logger;
+import com.b3dgs.lionengine.LoggerFactory;
 
 import com.b3dgs.lionengine.Context;
 import com.b3dgs.lionengine.LionEngineException;

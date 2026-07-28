@@ -190,6 +190,14 @@ public final class Rotating extends FeatureModel
             rings.get(i)
                  .setLocation(transformable.getX() + (i + 0.5) * UtilMath.cos(angle + 90) * 16,
                               transformable.getY() + (i + 0.5) * UtilMath.sin(angle + 90) * 16);
+            /* The parts are placed from here, by another object than the ones being moved.
+             * setLocation alone leaves it to the handler to notice, and whether it does
+             * depends on whether that part happened to back up its position before or after
+             * this ran - which is a matter of iteration order and therefore not the same on
+             * every platform. Announcing it here makes the collision box follow the piece
+             * whatever the order is. teleport() would do it too, but it drops the previous
+             * position the controlled variant reads below. */
+            rings.get(i).check(true);
         }
 
         if (config.getAmplitude() > 0)

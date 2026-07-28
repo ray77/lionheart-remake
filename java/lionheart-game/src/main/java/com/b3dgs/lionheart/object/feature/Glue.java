@@ -44,6 +44,9 @@ import com.b3dgs.lionheart.object.state.StateFall;
 @FeatureInterface
 public final class Glue extends FeatureModel implements RoutineUpdate, CollidableListener, Recyclable
 {
+
+
+
     private static final String NODE = "glue";
     private static final String ATT_FORCE = "force";
 
@@ -60,6 +63,8 @@ public final class Glue extends FeatureModel implements RoutineUpdate, Collidabl
     private boolean first;
     private Transformable other;
     private int offsetY;
+    /** Position at the previous pass, used to carry whoever stands on it. */
+    private double carriedFrom = Double.NaN;
     private boolean collide;
     private boolean glue;
     private boolean started;
@@ -169,7 +174,14 @@ public final class Glue extends FeatureModel implements RoutineUpdate, Collidabl
         }
         else if (glue && collide)
         {
-            other.moveLocationX(1.0, transformable.getX() - transformable.getOldX());
+            /* The distance is measured between two passes through here, not from the backup
+             * the frame started with: the swing is moved by another object, and whether that
+             * already happened when this runs depends on iteration order. Measuring it here
+             * carries the rider whatever the order is, at worst one frame behind. */
+            if (!Double.isNaN(carriedFrom))
+            {
+                other.moveLocationX(1.0, transformable.getX() - carriedFrom);
+            }
             other.getFeature(Body.class).resetGravity();
             other.teleportY(transformable.getY() + offsetY);
         }
@@ -177,6 +189,8 @@ public final class Glue extends FeatureModel implements RoutineUpdate, Collidabl
         {
             other.getFeature(StateHandler.class).changeState(StateFall.class);
         }
+
+        carriedFrom = transformable.getX();
 
         collide = false;
         other = null;
@@ -223,6 +237,7 @@ public final class Glue extends FeatureModel implements RoutineUpdate, Collidabl
         glue = true;
         collide = false;
         started = false;
+        carriedFrom = Double.NaN;
     }
 
     /**

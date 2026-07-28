@@ -3,8 +3,8 @@
     <lionengine:device class="com.b3dgs.lionengine.awt.Keyboard" id="0" index="0" name="Arrow keys">
         <lionengine:horizontal negative="37" positive="39"/>
         <lionengine:vertical negative="40" positive="38"/>
-        <lionengine:fire index="JUMP" positive="16"/>
-        <lionengine:fire index="ATTACK" positive="17"/>
+        <lionengine:fire index="JUMP" positive="32"/>
+        <lionengine:fire index="ATTACK" positive="88"/>
         <lionengine:fire index="CHEAT" positive="16711697"/>
         <lionengine:fire index="PAUSE" positive="80"/>
         <lionengine:fire index="QUIT" positive="27"/>

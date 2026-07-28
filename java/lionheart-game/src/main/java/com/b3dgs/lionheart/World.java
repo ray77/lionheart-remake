@@ -23,19 +23,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.b3dgs.lionengine.Logger;
+import com.b3dgs.lionengine.LoggerFactory;
 
 import com.b3dgs.lionengine.Align;
 import com.b3dgs.lionengine.LionEngineException;
@@ -159,13 +152,13 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
     private final Hud hud = services.create(Hud.class);
     private final Tick tick = new Tick();
 
-    private final ExecutorService executor;
-    private final BlockingDeque<Runnable> musicToPlay = new LinkedBlockingDeque<>();
+    /* Runs inline: a browser build has no worker thread to drain a blocking queue,
+     * and the tasks are short. Desktop keeps the same ordering, just without the hop. */
+    private final java.util.Deque<Runnable> musicToPlay = new java.util.ArrayDeque<>();
     private final List<Featurable> players = new ArrayList<>();
     private final Map<Integer, String> clients = services.add(new ConcurrentHashMap<>());
     private final Sprite splitNone = Drawable.loadSprite(Medias.create(Folder.SPRITE, "split_none.png"));
     private final Text text;
-    private final Thread musicTask;
     private final boolean debug;
     private final GameConfig game;
     private final Tick spawnTick = new Tick();
@@ -210,9 +203,6 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
     {
         super(services);
 
-        executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
-                                                runnable -> new Thread(runnable, getClass().getSimpleName()));
-
         final int size = Math.max(9, 9 * (int) Math.floor(source.getHeight() / (double) Constant.RESOLUTION.height()));
         text = Graphics.createText(size);
         text.setColor(ColorRgba.WHITE);
@@ -245,7 +235,6 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
 
         camera.setIntervals(Constant.CAMERA_HORIZONTAL_MARGIN, 0);
 
-        musicTask = new Thread(this::playNextMusicTask, "Musics");
 
         final int n = game.getSplit() != SplitType.NONE ? game.getPlayers() - 1 : 0;
         if (n == 2)
@@ -287,19 +276,14 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
         }
     }
 
+    /**
+     * Drain the pending music tasks, running them in place.
+     */
     private void playNextMusicTask()
     {
-        while (!Thread.currentThread().isInterrupted())
+        while (!musicToPlay.isEmpty())
         {
-            try
-            {
-                musicToPlay.take().run();
-            }
-            catch (@SuppressWarnings("unused") final InterruptedException exception)
-            {
-                Thread.currentThread().interrupt();
-                break;
-            }
+            musicToPlay.poll().run();
         }
     }
 
@@ -323,150 +307,46 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
      */
     void prepareNetwork(Network network, AtomicReference<Action> closer, InitConfig init) throws IOException
     {
-        if (!network.is(NetworkType.NONE))
+        if (preparer != null)
         {
-            final Featurable chatHandler = factory.create(Medias.create("ChatHandler.xml"));
-            handler.add(chatHandler);
-            services.add(chatHandler.getFeature(ChatHandler.class));
-        }
-
-        if (network.is(NetworkType.SERVER))
-        {
-            server = true;
-
-            final Channel channel = services.create(ChannelBuffer.class);
-            final Server server = services.add(new ServerUdp(channel));
-            closer.set(server::stop);
-            server.setInfoSupplier(() ->
-            {
-                final ByteBuffer buffer = ByteBuffer.allocate(4 + init.getStage().getPath().length());
-                buffer.put(UtilNetwork.toByte(game.getType()));
-                buffer.put(UtilConversion.fromUnsignedByte(init.getStage().getPath().length()));
-                buffer.put(StandardCharsets.UTF_8.encode(init.getStage().getPath()));
-                buffer.put(UtilConversion.fromUnsignedByte(init.getHealthMax()));
-                buffer.put(UtilConversion.fromUnsignedByte(init.getLife()));
-                return buffer;
-            });
-            server.start(network.getIp().get(), network.getPort().getAsInt());
-            handler.addComponent(new ComponentNetwork(services));
-
-            final Featurable serverHandler = factory.create(Medias.create("ServerHandler.xml"));
-            handler.add(serverHandler);
-
-            addServerListener(init, server, serverHandler);
-        }
-        else if (network.is(NetworkType.CLIENT))
-        {
-            client = true;
-
-            final Channel channel = services.create(ChannelBuffer.class);
-            final Client client = services.add(new ClientUdp(channel));
-            closer.set(client::disconnect);
-            addClientListener(network, client);
-            client.connect(network.getIp().get(), network.getPort().getAsInt());
-            client.setName(network.getName().get());
-            handler.addComponent(new ComponentNetwork(services));
+            preparer.prepare(this, network, closer, init);
         }
     }
 
-    private void addServerListener(InitConfig init, Server server, Featurable serverHandler)
+    /**
+     * Prepares the multiplayer session.
+     *
+     * <p>
+     * Kept behind a hook so an ahead-of-time compiled browser build never reaches the UDP stack: its static analysis
+     * follows branches that never run, and {@code java.net} has no browser equivalent. The desktop entry point
+     * installs the real implementation.
+     * </p>
+     */
+    public interface NetworkPreparer
     {
-        server.addListener(new ServerListener()
-        {
-            @Override
-            public void notifyServerStarted(String ip, int port)
-            {
-                // Nothing
-            }
-
-            @Override
-            public void notifyClientConnected(String ip, int port, Integer id)
-            {
-                onClientConnected(init, server, ip, id, serverHandler);
-            }
-
-            @Override
-            public void notifyClientDisconnected(String ip, int port, Integer id)
-            {
-                onClientDisconnected(id);
-            }
-
-            @Override
-            public void notifyClientNamed(Integer id, String name)
-            {
-                clients.put(id, name);
-            }
-        });
+        /**
+         * Prepare the session.
+         *
+         * @param world The world to set up.
+         * @param network The network configuration.
+         * @param closer Receives the shutdown action.
+         * @param init The initial configuration.
+         * @throws IOException If unable to start.
+         */
+        void prepare(World world, Network network, AtomicReference<Action> closer, InitConfig init) throws IOException;
     }
 
-    private void onClientConnected(InitConfig init, Server server, String ip, Integer id, Featurable serverHandler)
+    /** Installed preparer, <code>null</code> for single player only. */
+    private static NetworkPreparer preparer;
+
+    /**
+     * Install the multiplayer preparer.
+     *
+     * @param preparer The preparer, <code>null</code> to disable multiplayer.
+     */
+    public static synchronized void setNetworkPreparer(NetworkPreparer preparer)
     {
-        for (final Featurable featurable : handler.values())
-        {
-            if (featurable.hasFeature(EntityModel.class) && !featurable.hasFeature(NetworkedDevice.class))
-            {
-                try
-                {
-                    server.send(new IdentifiableCreate(UtilNetwork.SERVER_ID, featurable), id);
-                }
-                catch (final IOException exception)
-                {
-                    LOGGER.error("onClientConnected error", exception);
-                }
-            }
-        }
-
-        serverCreatePlayer(init, server, id, serverHandler);
-        clients.put(id, ip);
-    }
-
-    private void serverCreatePlayer(InitConfig init, Server server, Integer id, Featurable serverHandler)
-    {
-        final Featurable player = createPlayer(Settings.getInstance(),
-                                               init,
-                                               StageConfig.imports(new Configurer(init.getStage())));
-        player.ifIs(Networkable.class, n -> n.setClientId(id));
-        try
-        {
-            server.send(new IdentifiableCreate(id, serverHandler), id);
-            server.send(new IdentifiableCreate(id, player), id);
-        }
-        catch (final IOException exception)
-        {
-            LOGGER.error("serverCreatePlayer error", exception);
-        }
-    }
-
-    private void onClientDisconnected(Integer id)
-    {
-        for (final Featurable featurable : handler.values())
-        {
-            if (featurable.hasFeature(EntityModel.class)
-                && featurable.getFeature(Networkable.class).getClientId().equals(id))
-            {
-                handler.remove(featurable);
-            }
-        }
-        clients.remove(id);
-    }
-
-    private void addClientListener(Network network, Client client)
-    {
-        client.addListener(new ClientListener()
-        {
-            @Override
-            public void notifyConnected(String ip, int port, Integer id)
-            {
-                network.setClientId(id);
-                clients.put(id, network.getName().get());
-            }
-
-            @Override
-            public void notifyClientNamed(Integer id, String name)
-            {
-                clients.put(id, name);
-            }
-        });
+        World.preparer = preparer;
     }
 
     /**
@@ -617,7 +497,7 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
 
         if (settings.isFlagParallel())
         {
-            executor.execute(() -> createEffectCache(settings, stage));
+            com.b3dgs.lionengine.Parallels.get().forEach(1, i -> createEffectCache(settings, stage));
         }
         else
         {
@@ -800,7 +680,7 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
             {
                 if (settings.isFlagParallel())
                 {
-                    executor.execute(() -> map.loadAfter(map.getMedia()));
+                    com.b3dgs.lionengine.Parallels.get().forEach(1, i -> map.loadAfter(map.getMedia()));
                 }
                 else
                 {
@@ -968,6 +848,7 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
             featurable.getFeature(EntityModel.class).setCamera(camera);
             featurable.getFeature(EntityModel.class).setTracker(tracker);
             featurable.getFeature(Stats.class).apply(init);
+            featurable.getFeature(Stats.class).setImmortal(init.isCheats());
             player = featurable.getFeature(StateHandler.class);
             hud.setFeaturable(featurable);
         }
@@ -994,7 +875,7 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
         {
             if (settings.isFlagParallel())
             {
-                executor.execute(() -> loadRasterHero(stage, featurable));
+                com.b3dgs.lionengine.Parallels.get().forEach(1, i -> loadRasterHero(stage, featurable));
             }
             else
             {
@@ -1052,7 +933,7 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
         {
             if (settings.isFlagParallel())
             {
-                executor.execute(() -> loadRasterHero(stage, featurable));
+                com.b3dgs.lionengine.Parallels.get().forEach(1, i -> loadRasterHero(stage, featurable));
             }
             else
             {
@@ -1153,7 +1034,7 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
         final int entitiesPerThread = (int) Math.floor(entities.length / (double) threads);
         int start = 0;
 
-        final List<Future<Featurable[]>> tasks = new ArrayList<>(threads);
+        final List<java.util.function.Supplier<Featurable[]>> tasks = new ArrayList<>(threads);
         for (int i = 0; i < threads; i++)
         {
             final int end;
@@ -1172,9 +1053,9 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
         mergeEntitiesToHandler(tasks);
     }
 
-    private Future<Featurable[]> loadRasterEntities(StageConfig stage, Featurable[] featurables, int start, int end)
+    private java.util.function.Supplier<Featurable[]> loadRasterEntities(StageConfig stage, Featurable[] featurables, int start, int end)
     {
-        return executor.submit(() ->
+        return com.b3dgs.lionengine.Parallels.get().submit(() ->
         {
             final int n = end - start;
             final Featurable[] toAdd = new Featurable[n];
@@ -1188,28 +1069,19 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
         });
     }
 
-    private void mergeEntitiesToHandler(List<Future<Featurable[]>> tasks)
+    private void mergeEntitiesToHandler(List<java.util.function.Supplier<Featurable[]>> tasks)
     {
         final int n = tasks.size();
         for (int i = 0; i < n; i++)
         {
-            try
+            final Featurable[] toAdd = tasks.get(i).get();
+            if (toAdd != null)
             {
-                final Featurable[] toAdd = tasks.get(i).get();
                 for (int j = 0; j < toAdd.length; j++)
                 {
                     handler.add(toAdd[j]);
                     toAdd[j] = null;
                 }
-            }
-            catch (final InterruptedException exception)
-            {
-                Thread.currentThread().interrupt();
-                throw new LionEngineException(exception);
-            }
-            catch (final ExecutionException exception)
-            {
-                throw new LionEngineException(exception);
             }
         }
     }
@@ -1495,17 +1367,9 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
         }
         finally
         {
-            executor.shutdown();
+            // nothing to shut down: parallelism is provided by the platform backend
         }
-        try
-        {
-            executor.awaitTermination(PARALLEL_LOAD_TIMEOUT_SEC, TimeUnit.SECONDS);
-        }
-        catch (final InterruptedException exception)
-        {
-            Thread.currentThread().interrupt();
-            LOGGER.error("Interrupted!", exception);
-        }
+        // the tasks above already ran to completion through the platform backend
 
         handler.updateRemove();
         handler.updateAdd();
@@ -1520,7 +1384,6 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
                 splitHud[i].timeStart();
             }
         }
-        musicTask.start();
         tick.restart();
         spawnTick.start();
     }
@@ -1561,50 +1424,32 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
     @Override
     public void playMusic(Media media)
     {
-        if (!musicToPlay.offer(() ->
+        musicToPlay.offer(() ->
         {
-            synchronized (musicTask)
+            if (music != null)
             {
-                if (music != null)
-                {
-                    music.stop();
-                }
-                music = AudioFactory.loadAudio(media);
-
-                final Settings settings = Settings.getInstance();
-                if (settings.getVolumeMaster() > 0)
-                {
-                    music.setVolume(settings.getVolumeMusic());
-                    music.play();
-                }
+                music.stop();
             }
-        }))
-        {
-            LOGGER.warn("Unable to play music", media);
-        }
+            music = AudioFactory.loadAudio(media);
+
+            final Settings settings = Settings.getInstance();
+            if (settings.getVolumeMaster() > 0)
+            {
+                music.setVolume(settings.getVolumeMusic());
+                music.play();
+            }
+        });
+        playNextMusicTask();
     }
 
     @Override
     public void stopMusic()
     {
-        synchronized (musicTask)
+        musicToPlay.clear();
+        if (music != null)
         {
-            musicTask.interrupt();
-            try
-            {
-                musicTask.join(com.b3dgs.lionengine.Constant.THOUSAND);
-            }
-            catch (final InterruptedException exception)
-            {
-                Thread.currentThread().interrupt();
-                LOGGER.error("Interrupted!", exception);
-            }
-            musicToPlay.clear();
-            if (music != null)
-            {
-                music.stop();
-                music = null;
-            }
+            music.stop();
+            music = null;
         }
     }
 

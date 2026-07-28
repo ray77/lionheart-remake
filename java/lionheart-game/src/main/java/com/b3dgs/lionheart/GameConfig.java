@@ -179,7 +179,15 @@ public class GameConfig
      */
     public int getControl(int player)
     {
-        return controls.get(Integer.valueOf(player)).intValue();
+        final Integer control = controls.get(Integer.valueOf(player));
+        if (control == null)
+        {
+            /* Unset means the player uses the device of the same index. Returning it instead of
+             * unboxing null also keeps ahead-of-time builds working, where unboxing null raises a
+             * native error the callers' NullPointerException catch never sees. */
+            return player;
+        }
+        return control.intValue();
     }
 
     /**

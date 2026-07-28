@@ -63,6 +63,8 @@ public final class Stats extends FeatureModel implements Syncable, Snapshotable,
     private final Damages damages = new Damages(1, 1);
     private final StatsConfig config;
 
+    /** Immune to damage flag. */
+    private boolean immortal;
     private int sword;
     private boolean amulet;
     private int credits;
@@ -185,8 +187,24 @@ public final class Stats extends FeatureModel implements Syncable, Snapshotable,
      * @param damages The damages to apply.
      * @return <code>true</code> if empty health, <code>false</code> else.
      */
+    /**
+     * Make this one immune to damage, used by the trainer mode.
+     *
+     * @param immortal <code>true</code> to ignore all damage.
+     */
+    public void setImmortal(boolean immortal)
+    {
+        this.immortal = immortal;
+    }
+
     public boolean applyDamages(int damages)
     {
+        if (immortal)
+        {
+            /* Trainer mode: every source of damage runs through here - enemies, spikes,
+             * projectiles, drowning - so one gate covers them all. */
+            return false;
+        }
         if (networkable.isClient())
         {
             return false;

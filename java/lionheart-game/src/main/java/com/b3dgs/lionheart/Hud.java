@@ -55,8 +55,9 @@ import com.b3dgs.lionheart.object.feature.Stats;
  */
 public final class Hud implements Resource, Updatable, Renderable
 {
+
     private static final String IMG_HEART = "health.png";
-    private static final String IMG_HUD = "hud.png";
+    private static final String IMG_HUD = "hud_new.png";
     private static final String IMG_NUMBERS = "numbers.png";
     private static final String TXT_FILE = "hud.txt";
 
@@ -74,13 +75,33 @@ public final class Hud implements Resource, Updatable, Renderable
     private static final double AMULET_Y = 1.0;
     private static final int AMULET_TILE = 1;
 
-    private static final double SWORD_X_RATIO = 0.5;
+    /* The score sits in the middle now, so the sword moves into the free space left of it. */
+    private static final double SWORD_X_RATIO = 0.3;
     private static final double SWORD_Y = 1.0;
     private static final int SWORD_TILE = 2;
 
     private static final int LIFE_TILE = 6;
+    /** Star tile, marks the score. */
+    private static final int STAR_TILE = 7;
     private static final double LIFE_Y = 1.0;
     private static final double LIFE_X_BORDER = 4.0;
+
+    /** Score is centred on the top row, star included. */
+    private static final double SCORE_X_RATIO = 0.5;
+    /** Score top border. */
+    private static final int SCORE_Y = 1;
+    /** Gap between the star and the digits. */
+    private static final int SCORE_GAP = 2;
+    /** Score digit count. */
+    private static final int SCORE_DIGITS = 7;
+    /** Points per tile of ground covered. */
+    private static final int SCORE_PER_TILE = 10;
+    /** Tile width used to measure the covered ground. */
+    private static final int SCORE_TILE = 16;
+    /** Points per talisman. */
+    private static final int SCORE_PER_TALISMAN = 500;
+    /** Points per remaining life. */
+    private static final int SCORE_PER_LIFE = 1000;
 
     private static final double TIME_X_RATIO = 0.0;
     private static final int TIME_Y = 1;
@@ -100,9 +121,12 @@ public final class Hud implements Resource, Updatable, Renderable
     private final SpriteTiled amulet = Drawable.loadSpriteTiled(hudSurface, 16, 16);
     private final SpriteTiled sword = Drawable.loadSpriteTiled(hudSurface, 16, 16);
     private final SpriteTiled life = Drawable.loadSpriteTiled(hudSurface, 16, 16);
+    private final SpriteTiled star = Drawable.loadSpriteTiled(hudSurface, 16, 16);
     private final SpriteDigit numberTalisment = Drawable.loadSpriteDigit(number, 8, 16, 2);
     private final SpriteDigit numberLife = Drawable.loadSpriteDigit(number, 8, 16, 2);
     private final SpriteDigit numberTime = Drawable.loadSpriteDigit(number, 8, 16, 6);
+    /** Score display, same digits as the talisman and life counters. */
+    private final SpriteDigit numberScore = Drawable.loadSpriteDigit(number, 8, 16, SCORE_DIGITS);
 
     private final SpriteTiled[] hearts = new SpriteTiled[HEALTH_MAX];
     private final Tick tick = new Tick();
@@ -123,6 +147,9 @@ public final class Hud implements Resource, Updatable, Renderable
     private boolean healthVisible = true;
     private boolean talismentVisible = true;
     private boolean lifeVisible = true;
+    private boolean scoreVisible = true;
+    /** Furthest point reached, so the score never drops on the way back. */
+    private double progressMax;
 
     /**
      * Create hud.
@@ -240,6 +267,16 @@ public final class Hud implements Resource, Updatable, Renderable
      * 
      * @param visible <code>true</code> if visible, <code>false</code> else.
      */
+    /**
+     * Set score visibility.
+     *
+     * @param visible <code>true</code> if visible, <code>false</code> else.
+     */
+    public void setVisibleScore(boolean visible)
+    {
+        scoreVisible = visible;
+    }
+
     public void setVisibleLife(boolean visible)
     {
         lifeVisible = visible;
@@ -308,6 +345,23 @@ public final class Hud implements Resource, Updatable, Renderable
     /**
      * Load amulet location.
      */
+    /**
+     * Load score location.
+     */
+    private void loadScore()
+    {
+        star.setTile(STAR_TILE);
+
+        final double width = star.getTileWidth() + SCORE_GAP + numberScore.getWidth();
+        final double left = viewer.getWidth() * SCORE_X_RATIO - width / 2.0;
+
+        star.setLocation(left, SCORE_Y);
+        numberScore.setLocation(left + star.getTileWidth() + SCORE_GAP, SCORE_Y + 1);
+    }
+
+    /**
+     * Load amulet location.
+     */
     private void loadAmulet()
     {
         amulet.setTile(AMULET_TILE);
@@ -362,6 +416,14 @@ public final class Hud implements Resource, Updatable, Renderable
             sword.setTile(SWORD_TILE + stats.getSword());
         }
         numberLife.setValue(stats.getLife());
+
+        if (viewer.getX() > progressMax)
+        {
+            progressMax = viewer.getX();
+        }
+        numberScore.setValue((int) (progressMax / SCORE_TILE) * SCORE_PER_TILE
+                             + stats.getTalisment() * SCORE_PER_TALISMAN
+                             + stats.getLife() * SCORE_PER_LIFE);
     }
 
     /**
@@ -448,6 +510,11 @@ public final class Hud implements Resource, Updatable, Renderable
             life.render(g);
             numberLife.render(g);
         }
+        if (scoreVisible)
+        {
+            star.render(g);
+            numberScore.render(g);
+        }
 
         if (time.isStarted())
         {
@@ -487,6 +554,7 @@ public final class Hud implements Resource, Updatable, Renderable
 
         loadTalisment();
         loadSword();
+        loadScore();
         loadAmulet();
         loadLife();
         loadTime();
