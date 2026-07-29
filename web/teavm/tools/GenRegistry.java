@@ -7,10 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Erzeugt aus einer Klassenliste eine Registry, die Konstruktoren ohne Reflexion aufruft.
+ * Turns a list of class names into a registry that calls constructors without reflection.
  *
- * Laeuft auf dem Desktop-JVM (volle Reflexion vorhanden) und schreibt Java-Quelltext,
- * den TeaVM uebersetzen kann: Klassenname -> Lambda, das den Konstruktor direkt aufruft.
+ * Runs on a desktop JVM, where reflection is available, and writes Java source,
+ * something TeaVM can translate: class name -> lambda calling the constructor directly.
  */
 public final class GenRegistry {
 
@@ -33,7 +33,7 @@ public final class GenRegistry {
             try {
                 type = Class.forName(name, false, GenRegistry.class.getClassLoader());
             } catch (Throwable t) {
-                problems.add(name + " (nicht gefunden)");
+                problems.add(name + " (not found)");
                 skipped++;
                 continue;
             }
@@ -81,17 +81,17 @@ public final class GenRegistry {
            .append("import java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.HashMap;\n")
            .append("import java.util.List;\nimport java.util.Map;\nimport java.util.function.Function;\n\n")
            .append("/**\n")
-           .append(" * Konstruktor-Registry - ERZEUGT, nicht von Hand pflegen (tools/GenRegistry.java).\n")
+           .append(" * Constructor registry - GENERATED, do not edit by hand (tools/GenRegistry.java).\n")
            .append(" *\n")
            .append(" * <p>\n")
-           .append(" * TeaVM erlaubt kein Constructor.newInstance() auf beliebigen Klassen. LionEngine\n")
-           .append(" * erzeugt Spielobjekte aber ueber Klassennamen aus XML. Diese Registry haelt fuer\n")
-           .append(" * jeden bekannten Konstruktor ein Lambda, das ihn direkt aufruft - statisch\n")
-           .append(" * uebersetzbar und ohne Reflexion.\n")
+           .append(" * TeaVM does not allow Constructor.newInstance() on arbitrary classes, while LionEngine\n")
+           .append(" * creates game objects from class names read out of XML. This registry holds a lambda\n")
+           .append(" * for every known constructor, calling it directly - translatable ahead of time and\n")
+           .append(" * without reflection.\n")
            .append(" * </p>\n")
            .append(" */\n")
            .append("public final class ReflectRegistry {\n\n")
-           .append("    /** Eintrag: Parametertypen und passender Erzeuger. */\n")
+           .append("    /** Entry: parameter types and the matching maker. */\n")
            .append("    private static final class Entry {\n")
            .append("        final Class<?>[] types;\n")
            .append("        final Function<Object[], Object> maker;\n\n")
@@ -105,9 +105,9 @@ public final class GenRegistry {
            .append("        ENTRIES.computeIfAbsent(type, k -> new ArrayList<>()).add(new Entry(types, maker));\n")
            .append("    }\n\n")
            .append("    /**\n")
-           .append("     * @param type Die gewuenschte Klasse.\n")
-           .append("     * @param params Die Argumente.\n")
-           .append("     * @return Die Instanz, oder <code>null</code> wenn kein Eintrag passt.\n")
+           .append("     * @param type The wanted class.\n")
+           .append("     * @param params The arguments.\n")
+           .append("     * @return The instance, or <code>null</code> when no entry fits.\n")
            .append("     */\n")
            .append("    public static Object create(Class<?> type, Object[] params) {\n")
            .append("        final List<Entry> list = ENTRIES.get(type);\n")
@@ -132,8 +132,8 @@ public final class GenRegistry {
            .append("        return null;\n")
            .append("    }\n\n")
            .append("    /**\n")
-           .append("     * @param type Die Klasse.\n")
-           .append("     * @return Die bekannten Parametertyp-Listen, laengste zuerst.\n")
+           .append("     * @param type The class.\n")
+           .append("     * @return The known parameter type lists, longest first.\n")
            .append("     */\n")
            .append("    public static List<Class<?>[]> signatures(Class<?> type) {\n")
            .append("        final List<Entry> list = ENTRIES.get(type);\n")
@@ -146,7 +146,7 @@ public final class GenRegistry {
            .append("        }\n")
            .append("        return out;\n")
            .append("    }\n\n")
-           .append("    /** @return Anzahl registrierter Konstruktoren. */\n")
+           .append("    /** @return The number of registered constructors. */\n")
            .append("    public static int size() {\n")
            .append("        int n = 0;\n")
            .append("        for (final List<Entry> l : ENTRIES.values()) {\n")
@@ -154,11 +154,11 @@ public final class GenRegistry {
            .append("        }\n")
            .append("        return n;\n")
            .append("    }\n\n")
-           .append("    /** Klassenname -> Klasse, fuer die Aufloesung ohne ClassLoader. */\n")
+           .append("    /** Class name -> class, for resolution without a ClassLoader. */\n")
            .append("    private static final Map<String, Class<?>> BY_NAME = new HashMap<>();\n\n")
            .append("    /**\n")
-           .append("     * @param name Der vollstaendige Klassenname.\n")
-           .append("     * @return Die Klasse, oder <code>null</code> wenn unbekannt.\n")
+           .append("     * @param name The fully qualified class name.\n")
+           .append("     * @return The class, or <code>null</code> when unknown.\n")
            .append("     */\n")
            .append("    public static Class<?> resolve(String name) {\n")
            .append("        return BY_NAME.get(name);\n")
@@ -168,7 +168,7 @@ public final class GenRegistry {
            .append(body)
            .append("    }\n\n")
            .append("    private ReflectRegistry() {\n")
-           .append("        // Hilfsklasse\n")
+           .append("        // Utility class\n")
            .append("    }\n")
            .append("}\n");
 
@@ -176,9 +176,9 @@ public final class GenRegistry {
         try (PrintWriter w = new PrintWriter(Files.newBufferedWriter(out))) {
             w.print(src);
         }
-        System.out.println("registriert: " + ok + " Konstruktoren, uebersprungen: " + skipped);
+        System.out.println("registered: " + ok + " constructors, skipped: " + skipped);
         if (!problems.isEmpty()) {
-            System.out.println("nicht gefunden: " + problems.size());
+            System.out.println("not found: " + problems.size());
             problems.stream().limit(5).forEach(p -> System.out.println("  " + p));
         }
     }

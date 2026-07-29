@@ -1,17 +1,17 @@
 #!/bin/bash
-# Baut sc68 als WASM-Modul für den Browser.
+# Builds sc68 as a WebAssembly module for the browser.
 #
-# Kein configure: das Projekt ist von 2003 und bringt seine Konfigurationsköpfe
-# fertig mit, die Quellen sind einfaches C ohne Systemabhängigkeiten. Also alle
-# nötigen Übersetzungseinheiten direkt an emcc.
+# No configure: the project is from 2003, ships its config headers ready made,
+# and the sources are plain C without system dependencies. So every translation
+# unit needed goes straight to emcc.
 set -e
 
-# Emscripten: EMSDK auf die eigene Installation zeigen lassen.
+# Emscripten: point EMSDK at your own installation.
 : "${EMSDK:=$HOME/emsdk}"
 source "$EMSDK/emsdk_env.sh" >/dev/null 2>&1 || {
-  echo "emsdk nicht gefunden. EMSDK=<pfad> setzen." >&2; exit 1; }
+  echo "emsdk not found. Set EMSDK=<path>." >&2; exit 1; }
 
-# sc68 2.2.1 bei Bedarf holen (nicht mitversioniert, fremder Quellcode).
+# Fetch sc68 2.2.1 on demand (third party source, not vendored).
 ROOT_EARLY="$(cd "$(dirname "$0")" && pwd)"
 if [ ! -d "$ROOT_EARLY/sc68-2.2.1" ]; then
   curl -sL -o "$ROOT_EARLY/sc68-2.2.1.tar.gz" \
@@ -26,13 +26,13 @@ mkdir -p "$OUT"
 
 INC="-I$SRC -I$SRC/api68 -I$SRC/emu68 -I$SRC/io68 -I$SRC/file68 -I$SRC/unice68"
 
-# Sonst von configure gesetzt. Der Pfad ist bedeutungslos: die 18 Lionheart-Stuecke
-# tragen ihren 68000-Abspielcode selbst (kein SCRE-Feld), es wird nie etwas
-# nachgeladen. HAVE_GETENV verhindert, dass die Quelle ihr eigenes getenv erklaert.
+# Normally set by configure. The path is meaningless here: the 18 Lionheart tracks
+# carry their own 68000 replay code (no SCRE field), so nothing is ever loaded from
+# it. HAVE_GETENV keeps the source from declaring its own getenv.
 INC="$INC -DSC68_SHARED_DATA_PATH='\"/\"' -DHAVE_GETENV=1"
 
-# unice68 packt komprimierte Stücke aus, file68 liest das sc68-Dateiformat,
-# emu68 ist der 68000, io68 sind die Klangbausteine (YM2149, Paula, MW).
+# unice68 unpacks compressed tracks, file68 reads the sc68 file format,
+# emu68 is the 68000, io68 the sound chips (YM2149, Paula, MW).
 FILES="$SRC/api68/api68.c $SRC/api68/conf68.c $SRC/api68/mixer68.c"
 FILES="$FILES $(ls $SRC/emu68/*.c $SRC/io68/*.c $SRC/file68/*.c $SRC/unice68/*.c)"
 
@@ -51,5 +51,5 @@ emcc -O3 $INC \
   -Wno-incompatible-pointer-types \
   -Wno-int-conversion
 
-echo "fertig:"
+echo "done:"
 ls -la "$OUT"/sc68.js "$OUT"/sc68.wasm

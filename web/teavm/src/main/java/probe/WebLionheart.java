@@ -26,31 +26,30 @@ import com.b3dgs.lionengine.web.graphic.FactoryGraphicWeb;
 import com.b3dgs.lionengine.web.xml.DocumentProviderWeb;
 
 /**
- * Startet Lionheart im Browser.
+ * Starts Lionheart in a browser.
  *
  * <p>
- * Reihenfolge: erst alle Spieldaten holen (Datendateien als ein Paket, Bilder
- * einzeln, weil der Browser sie selbst dekodieren muss), dann die Unterbauten
- * einhaengen und zuletzt die Spielschleife starten.
+ * In this order: fetch the assets (data files as one pack, images one by one because the browser has to decode those
+ * itself), install the backends, then start the game loop.
  * </p>
  */
 public final class WebLionheart {
 
-    /** Wurzel der Spieldaten auf dem Server. */
+    /** Asset root on the server. */
     private static final String ASSETS = "assets/";
-    /* Der Motor leitet die Spielflaeche aus dem Seitenverhaeltnis der Ausgabe ab
-     * (Util.getResolution: faktor = 208 / hoehe). 640x480 ergab 277x208 und damit einen
-     * viel zu schmalen Ausschnitt. 1110x624 ist genau das Dreifache von 370x208 - das
-     * Breitbildmass, fuer das die Hintergruende gezeichnet sind (mountain.png ist 370 breit). */
-    /** Bildschirmbreite. */
+    /* The engine derives the game surface from the aspect ratio of the output
+     * (Util.getResolution: factor = 208 / height). 640x480 gave 277x208, far too narrow a view.
+     * 1110x624 is exactly three times 370x208 - the widescreen size the backgrounds are drawn
+     * for (mountain.png is 370 wide). */
+    /** Screen width. */
     private static final int WIDTH = 1110;
-    /** Bildschirmhoehe. */
+    /** Screen height. */
     private static final int HEIGHT = 624;
 
 
     public static void main(String[] args) {
         try {
-            status("hole Verzeichnis…");
+            status("fetching index…");
             byte[] listBytes = fetch("assets.lst");
             byte[] pak = fetch("assets.pak");
 
@@ -71,7 +70,7 @@ public final class WebLionheart {
                     data++;
                 }
             }
-            status(data + " Datendateien entpackt, lade Bilder…");
+            status(data + " data files unpacked, loading images…");
 
             for (String line : lines) {
                 if (line.length() > 2 && line.charAt(0) == 'I') {
@@ -83,15 +82,15 @@ public final class WebLionheart {
                     }
                 }
             }
-            status(data + " Daten + " + images + " Bilder geladen — starte Spiel…");
+            status(data + " data + " + images + " images loaded — starting game…");
             boot();
         } catch (Throwable t) {
-            status("FEHLER: " + t);
+            status("ERROR: " + t);
             status("<pre id=\"stack\">" + trace(t) + "</pre>");
         }
     }
 
-    /** Datei holen, dabei anhalten bis sie da ist. */
+    /** Fetch a file, suspending until it has arrived. */
     @Async
     private static native byte[] fetch(String path);
 
@@ -117,7 +116,7 @@ public final class WebLionheart {
         xhr.send();
     }
 
-    /** Bild laden, dabei anhalten bis es dekodiert ist. */
+    /** Load an image, suspending until it is decoded. */
     @Async
     private static native boolean awaitImage(HTMLImageElement img, String src);
 
@@ -127,7 +126,7 @@ public final class WebLionheart {
         img.setSrc(src);
     }
 
-    /** Unterbauten einhaengen und Spiel starten. */
+    /** Install the backends and start the game. */
     private static void boot() throws Throwable {
         try {
             Medias.setFactoryMedia(new FactoryMediaWeb());
@@ -146,16 +145,15 @@ public final class WebLionheart {
             });
             UtilReflection.setClassResolver((loader, className) -> ReflectRegistry.resolve(className));
 
-            /* Klaenge laufen ueber die Browser-Tonausgabe. Die Musik liegt als sc68 vor
-             * (Atari-Chipmusik) - die spielt der nach WASM uebersetzte sc68-Abspieler,
-             * siehe sc68player.js. */
+            /* Sound effects go through the browser audio engine. The music is sc68 (Atari chip
+             * music), played by the sc68 replayer compiled to WebAssembly, see sc68player.js. */
             com.b3dgs.lionengine.audio.AudioFactory.addFormat(
                 new com.b3dgs.lionengine.web.audio.AudioFormatWeb());
             com.b3dgs.lionengine.audio.AudioFactory.addFormat(
                 com.b3dgs.lionengine.web.audio.AudioFormatWeb.chip());
 
-            /* Die Spiellogik laeuft mit 50 Hz wie auf dem Amiga, gezeichnet wird so oft der
-             * Browser laesst. Der Desktop trennt das genauso (LoopHybrid). */
+            /* The game logic runs at 50 Hz as on the Amiga, rendering happens as often as the
+             * browser allows. The desktop keeps the two apart the same way (LoopHybrid). */
             com.b3dgs.lionheart.Util.setLoopSupplier(
                 () -> new com.b3dgs.lionengine.web.LoopWeb(com.b3dgs.lionheart.Constant.RESOLUTION.rate()));
 
@@ -170,10 +168,8 @@ public final class WebLionheart {
             final int level = readLevel(url);
 
             if (trainer || level > 0) {
-                /* Testzugang: ?trainer=true#level=02 startet ohne Umweg ueber Menu und Intro
-                 * mitten im gewaehlten Abschnitt. TRAINING ist der dafuer vorgesehene Spieltyp
-                 * ("custom startup on a single chosen stage"), der Schummelschalter steckt in
-                 * InitConfig. */
+                /* Test entry: ?trainer=true#level=02 starts in the chosen stage, skipping menu
+                 * and intro. The cheat flag lives in InitConfig. */
                 final com.b3dgs.lionengine.Media stage =
                     com.b3dgs.lionheart.Util.getStage("original",
                                                       com.b3dgs.lionheart.Difficulty.NORMAL,
@@ -182,9 +178,9 @@ public final class WebLionheart {
                     final java.util.Map<Integer, Integer> controls = new java.util.HashMap<>();
                     controls.put(Integer.valueOf(0), Integer.valueOf(0));
 
-                    /* STORY statt TRAINING: nur dieser Spieltyp haengt am Ende eines Abschnitts
-                     * den naechsten an (World.loadNextStage). TRAINING wuerde ins Menue
-                     * zurueckkehren - laut Motor spielt es genau einen gewaehlten Abschnitt. */
+                    /* STORY rather than TRAINING: only that type chains the next stage when one
+                     * ends (World.loadNextStage). TRAINING would return to the menu, as it is
+                     * meant to play exactly one chosen stage. */
                     game = new com.b3dgs.lionheart.GameConfig(
                         com.b3dgs.lionheart.GameType.STORY,
                         1,
@@ -205,31 +201,31 @@ public final class WebLionheart {
                             startpunkt(url)));
                     direct = Boolean.TRUE;
                     final int sx = readNumber(url, "x=");
-                    status("Testzugang: Abschnitt " + (level > 0 ? level : 1)
-                           + (trainer ? ", Trainer an" : "")
-                           + (sx >= 0 ? ", Start bei Kachel " + sx + "/" + readNumber(url, "y=") : ""));
+                    status("test entry: stage " + (level > 0 ? level : 1)
+                           + (trainer ? ", trainer on" : "")
+                           + (sx >= 0 ? ", starting at tile " + sx + "/" + readNumber(url, "y=") : ""));
                 } else {
-                    status("Abschnitt " + level + " gibt es nicht, starte normal.");
+                    status("stage " + level + " does not exist, starting normally.");
                 }
             }
 
             if (Boolean.TRUE.equals(direct)) {
-                /* Geradewegs in die Szene: die Ladesequenz schoebe bei STORY erst das Intro
-                 * dazwischen. Ihr Vorwaermen der Klaenge entfaellt dabei - im Browser werden
-                 * die ohnehin beim Anlegen dekodiert. */
+                /* Straight into the scene: for STORY the loading sequence would put the intro in
+                 * between. Its sound warm up is skipped, which costs nothing here - in a browser
+                 * the sounds are decoded when they are created anyway. */
                 Loader.start(config, com.b3dgs.lionheart.Scene.class, game, Boolean.FALSE);
             } else {
                 Loader.start(config, com.b3dgs.lionheart.Loading.class, game, direct);
             }
-            status("Spiel beendet.");
+            status("game ended.");
         } catch (Throwable t) {
-            status("FEHLER beim Start: " + t);
+            status("ERROR while starting: " + t);
             status("<pre id=\"stack\">" + trace(t) + "</pre>");
             throw t;
         }
     }
 
-    /** Den Weg zum Fehler holen: bei einem JS-Fehler steckt er im ausgepackten Objekt. */
+    /** Get the call path of a failure: for a JavaScript error it sits in the unwrapped object. */
     private static String trace(Throwable t) {
         final JSObject raw = JSExceptions.getJSException(t);
         if (raw != null) {
@@ -239,22 +235,22 @@ public final class WebLionheart {
         for (StackTraceElement e : t.getStackTrace()) {
             out.append(e).append('\n');
         }
-        return out.length() == 0 ? "(kein Weg bekannt)" : out.toString();
+        return out.length() == 0 ? "(no call path)" : out.toString();
     }
 
     @JSBody(params = "e", script = "return e && e.stack ? String(e.stack) : String(e);")
     private static native String jsStack(JSObject e);
 
     /**
-     * Startpunkt aus der Adresse lesen, in Kacheln: <code>&amp;x=370&amp;y=12</code>.
+     * Read the spawn point from the address, in tiles: <code>&amp;x=370&amp;y=12</code>.
      *
      * <p>
-     * Der Motor rechnet die Angabe selbst mit der Kachelbreite hoch, deshalb sind es Kacheln
-     * und keine Bildpunkte. Ohne Angabe bleibt es beim gewoehnlichen Startpunkt des Abschnitts.
+     * The engine multiplies by the tile width itself, which is why these are tiles and not pixels. Without them the
+     * stage keeps its usual start.
      * </p>
      *
-     * @param url Abfrage und Sprungmarke.
-     * @return Der Startpunkt, leer wenn keiner angegeben ist.
+     * @param url The query and the fragment.
+     * @return The spawn point, empty when none is given.
      */
     private static java.util.Optional<com.b3dgs.lionengine.geom.Coord> startpunkt(String url) {
         final int x = readNumber(url, "x=");
@@ -266,11 +262,11 @@ public final class WebLionheart {
     }
 
     /**
-     * Zahl hinter einem Schluessel lesen.
+     * Read the number following a key.
      *
-     * @param url Adresszeile.
-     * @param key Schluessel samt Gleichheitszeichen.
-     * @return Die Zahl, -1 wenn nicht vorhanden.
+     * @param url The address.
+     * @param key The key including the equals sign.
+     * @return The number, -1 when absent.
      */
     private static int readNumber(String url, String key) {
         int at = url.indexOf(key);
@@ -290,15 +286,15 @@ public final class WebLionheart {
         return Integer.parseInt(url.substring(at + key.length(), end));
     }
 
-    /** Adresszeile holen: Abfrage und Sprungmarke zusammen. */
+    /** Get the address: query and fragment together. */
     @JSBody(params = {}, script = "return window.location.search + window.location.hash;")
     private static native String urlParams();
 
     /**
-     * Abschnittsnummer aus der Adresse lesen.
+     * Read the stage number from the address.
      *
-     * @param url Abfrage und Sprungmarke.
-     * @return Die Nummer, 0 wenn keine angegeben ist.
+     * @param url The query and the fragment.
+     * @return The number, 0 when none is given.
      */
     private static int readLevel(String url) {
         final int at = url.indexOf("level=");

@@ -1,139 +1,139 @@
-/* Musikwiedergabe über sc68 im WASM-Teil.
+/* Music playback through the sc68 replayer compiled to WebAssembly.
  *
- * sc68 ist abrufend: es füllt einen PCM-Puffer, so oft man will. Deshalb wird
- * hier nichts vorgerendert - ein Verarbeitungsknoten holt sich seine Häppchen,
- * wenn die Tonausgabe welche braucht. Die Stücke laufen damit endlos ohne Naht,
- * und eine Datei bleibt bei ihren ~70 KB statt als OGG aufzugehen.
+ * sc68 is pull based: it fills a PCM buffer whenever asked. So nothing is
+ * rendered ahead - a processing node pulls its chunks when the output needs
+ * them. Tracks therefore loop without a seam, and a file stays at its original
+ * few dozen kilobytes instead of growing into a stream.
  *
- * Nach aussen nur vier Aufrufe, die die Java-Seite bedient.
+ * Four calls to the outside, all driven from the Java side.
  */
 (function () {
     'use strict';
 
-    var STUECK = 4096;        // Bilder je Abruf, ~93 ms bei 44,1 kHz
-    var ENDE = 32;            // API68_END
+    var CHUNK = 4096;         // frames per pull, about 93 ms at 44.1 kHz
+    var END = 32;             // API68_END
 
-    var modul = null;         // WASM-Modul, null bis geladen
-    var kontext = null;       // Tonausgabe, kommt von der Java-Seite
-    var knoten = null;        // Verarbeitungsknoten
-    var regler = null;        // Lautstärke
-    var puffer = 0;           // Zeiger auf den PCM-Puffer im WASM-Speicher
-    var lautstaerke = 1.0;
-    var offen = false;
-    var wartend = null;       // Stück, das vor dem Laden des Moduls kam
+    var module = null;        // WebAssembly module, null until loaded
+    var context = null;       // audio output, handed over by the Java side
+    var node = null;          // processing node
+    var gain = null;          // volume
+    var buffer = 0;           // pointer to the PCM buffer inside the module
+    var volume = 1.0;
+    var open = false;
+    var waiting = null;       // track handed over before the module was ready
 
-    function baueKette() {
-        if (knoten || !kontext) {
+    function buildChain() {
+        if (node || !context) {
             return;
         }
-        regler = kontext.createGain();
-        regler.gain.value = lautstaerke;
-        regler.connect(kontext.destination);
+        gain = context.createGain();
+        gain.gain.value = volume;
+        gain.connect(context.destination);
 
-        knoten = kontext.createScriptProcessor(STUECK, 0, 2);
-        knoten.onaudioprocess = function (e) {
-            var links = e.outputBuffer.getChannelData(0);
-            var rechts = e.outputBuffer.getChannelData(1);
-            var n = links.length;
+        node = context.createScriptProcessor(CHUNK, 0, 2);
+        node.onaudioprocess = function (e) {
+            var left = e.outputBuffer.getChannelData(0);
+            var right = e.outputBuffer.getChannelData(1);
+            var n = left.length;
 
-            if (!modul || !offen) {
-                links.fill(0);
-                rechts.fill(0);
+            if (!module || !open) {
+                left.fill(0);
+                right.fill(0);
                 return;
             }
-            var status = modul._sc68w_render(puffer, n);
-            var pcm = new Int16Array(modul.HEAP16.buffer, puffer, n * 2);
+            var status = module._sc68w_render(buffer, n);
+            var pcm = new Int16Array(module.HEAP16.buffer, buffer, n * 2);
             for (var i = 0, j = 0; i < n; i++, j += 2) {
-                links[i] = pcm[j] / 32768;
-                rechts[i] = pcm[j + 1] / 32768;
+                left[i] = pcm[j] / 32768;
+                right[i] = pcm[j + 1] / 32768;
             }
-            var spitze = 0;
+            var peak = 0;
             for (var k = 0; k < n; k += 16) {
-                var a = Math.abs(links[k]);
-                if (a > spitze) {
-                    spitze = a;
+                var a = Math.abs(left[k]);
+                if (a > peak) {
+                    peak = a;
                 }
             }
             window.lionMusic = {
-                spielt: offen,
-                spitze: spitze,
-                abrufe: (window.lionMusic ? window.lionMusic.abrufe : 0) + 1
+                playing: open,
+                peak: peak,
+                pulls: (window.lionMusic ? window.lionMusic.pulls : 0) + 1
             };
 
-            if (status & ENDE) {
-                /* Ans Ende gekommen: wieder von vorn, damit die Musik im Abschnitt
-                 * durchläuft. sc68 setzt dabei seinen Zustand selbst zurück. */
-                modul._sc68w_play(1);
+            if (status & END) {
+                /* Reached the end: start over, so the music keeps going for the whole stage.
+                 * sc68 resets its own state doing that. */
+                module._sc68w_play(1);
             }
         };
-        knoten.connect(regler);
+        node.connect(gain);
     }
 
-    function starte(bytes) {
-        if (!modul) {
-            wartend = bytes;
+    function start(bytes) {
+        if (!module) {
+            waiting = bytes;
             return;
         }
-        baueKette();
-        if (kontext && kontext.state !== 'running') {
-            /* Der Browser haelt die Ausgabe an, bis jemand die Seite angefasst hat. Startet
-             * das Spiel gleich in einen Abschnitt, ist das beim ersten Stueck noch nicht
-             * passiert - also hier noch einmal nachfragen. */
-            kontext.resume();
+        buildChain();
+        if (context && context.state !== 'running') {
+            /* The browser holds audio until someone has interacted with the page. A game that
+             * starts straight into a stage plays its first track before that has happened, so
+             * ask again here. */
+            context.resume();
         }
 
-        var p = modul._malloc(bytes.length);
-        modul.HEAPU8.set(bytes, p);
-        var ok = modul._sc68w_load(p, bytes.length);
-        modul._free(p);
-        window.lionMusikLetzt = {bytes: bytes.length, load: ok};
+        var p = module._malloc(bytes.length);
+        module.HEAPU8.set(bytes, p);
+        var ok = module._sc68w_load(p, bytes.length);
+        module._free(p);
+        window.lionMusicLast = {bytes: bytes.length, load: ok};
         if (ok !== 0) {
-            offen = false;
+            open = false;
             return;
         }
-        modul._sc68w_play(1);
-        offen = true;
+        module._sc68w_play(1);
+        open = true;
     }
 
     window.lionSc68 = {
-        /** Tonausgabe übernehmen, die die Java-Seite schon angelegt hat. */
+        /** Take over the audio output the Java side has already created. */
         init: function (audioContext) {
-            kontext = audioContext;
+            context = audioContext;
         },
-        /** Stück aus Rohbytes starten, löst ein laufendes ab. */
+        /** Start a track from raw bytes, replacing whatever is playing. */
         play: function (bytes) {
-            starte(bytes);
+            start(bytes);
         },
         stop: function () {
-            offen = false;
-            if (modul) {
-                modul._sc68w_stop();
+            open = false;
+            if (module) {
+                module._sc68w_stop();
             }
         },
         setVolume: function (v) {
-            lautstaerke = v;
-            if (regler) {
-                regler.gain.value = v;
+            volume = v;
+            if (gain) {
+                gain.gain.value = v;
             }
         },
-        bereit: function () {
-            return !!modul;
+        ready: function () {
+            return !!module;
         },
-        /** Tonausgabe herausgeben, nur zur Kontrolle. */
-        kontext: function () {
-            return kontext;
+        /** Hand out the audio output, for inspection only. */
+        audioContext: function () {
+            return context;
         }
     };
 
     createSc68().then(function (m) {
-        modul = m;
-        var rate = kontext ? kontext.sampleRate : 44100;
-        modul._sc68w_open(rate | 0);
-        puffer = modul._malloc(STUECK * 4);
-        if (wartend) {
-            var b = wartend;
-            wartend = null;
-            starte(b);
+        module = m;
+        var rate = context ? context.sampleRate : 44100;
+        module._sc68w_open(rate | 0);
+        buffer = module._malloc(CHUNK * 4);
+        if (waiting) {
+            var b = waiting;
+            waiting = null;
+            start(b);
         }
     });
 }());

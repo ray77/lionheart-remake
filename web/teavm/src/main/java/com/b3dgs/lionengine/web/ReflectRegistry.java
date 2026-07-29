@@ -8,18 +8,18 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Konstruktor-Registry - ERZEUGT, nicht von Hand pflegen (tools/GenRegistry.java).
+ * Constructor registry - GENERATED, do not edit by hand (tools/GenRegistry.java).
  *
  * <p>
- * TeaVM erlaubt kein Constructor.newInstance() auf beliebigen Klassen. LionEngine
- * erzeugt Spielobjekte aber ueber Klassennamen aus XML. Diese Registry haelt fuer
- * jeden bekannten Konstruktor ein Lambda, das ihn direkt aufruft - statisch
- * uebersetzbar und ohne Reflexion.
+ * TeaVM does not allow Constructor.newInstance() on arbitrary classes, while LionEngine
+ * creates game objects from class names read out of XML. This registry holds a lambda
+ * for every known constructor, calling it directly - translatable ahead of time and
+ * without reflection.
  * </p>
  */
 public final class ReflectRegistry {
 
-    /** Eintrag: Parametertypen und passender Erzeuger. */
+    /** Entry: parameter types and the matching maker. */
     private static final class Entry {
         final Class<?>[] types;
         final Function<Object[], Object> maker;
@@ -37,9 +37,9 @@ public final class ReflectRegistry {
     }
 
     /**
-     * @param type Die gewuenschte Klasse.
-     * @param params Die Argumente.
-     * @return Die Instanz, oder <code>null</code> wenn kein Eintrag passt.
+     * @param type The wanted class.
+     * @param params The arguments.
+     * @return The instance, or <code>null</code> when no entry fits.
      */
     public static Object create(Class<?> type, Object[] params) {
         final List<Entry> list = ENTRIES.get(type);
@@ -65,8 +65,8 @@ public final class ReflectRegistry {
     }
 
     /**
-     * @param type Die Klasse.
-     * @return Die bekannten Parametertyp-Listen, laengste zuerst.
+     * @param type The class.
+     * @return The known parameter type lists, longest first.
      */
     public static List<Class<?>[]> signatures(Class<?> type) {
         final List<Entry> list = ENTRIES.get(type);
@@ -80,7 +80,7 @@ public final class ReflectRegistry {
         return out;
     }
 
-    /** @return Anzahl registrierter Konstruktoren. */
+    /** @return The number of registered constructors. */
     public static int size() {
         int n = 0;
         for (final List<Entry> l : ENTRIES.values()) {
@@ -89,12 +89,12 @@ public final class ReflectRegistry {
         return n;
     }
 
-    /** Klassenname -> Klasse, fuer die Aufloesung ohne ClassLoader. */
+    /** Class name -> class, for resolution without a ClassLoader. */
     private static final Map<String, Class<?>> BY_NAME = new HashMap<>();
 
     /**
-     * @param name Der vollstaendige Klassenname.
-     * @return Die Klasse, oder <code>null</code> wenn unbekannt.
+     * @param name The fully qualified class name.
+     * @return The class, or <code>null</code> when unknown.
      */
     public static Class<?> resolve(String name) {
         return BY_NAME.get(name);
@@ -836,8 +836,8 @@ public final class ReflectRegistry {
         add(com.b3dgs.lionengine.Timing.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.Timing());
         add(com.b3dgs.lionengine.Xml.class, new Class<?>[] {java.lang.String.class}, a -> new com.b3dgs.lionengine.Xml((java.lang.String) a[0]));
         add(com.b3dgs.lionengine.Xml.class, new Class<?>[] {com.b3dgs.lionengine.Media.class}, a -> new com.b3dgs.lionengine.Xml((com.b3dgs.lionengine.Media) a[0]));
-        add(com.b3dgs.lionengine.XmlReader.class, new Class<?>[] {com.b3dgs.lionengine.Media.class}, a -> new com.b3dgs.lionengine.XmlReader((com.b3dgs.lionengine.Media) a[0]));
         add(com.b3dgs.lionengine.XmlReader.class, new Class<?>[] {java.lang.String.class}, a -> new com.b3dgs.lionengine.XmlReader((java.lang.String) a[0]));
+        add(com.b3dgs.lionengine.XmlReader.class, new Class<?>[] {com.b3dgs.lionengine.Media.class}, a -> new com.b3dgs.lionengine.XmlReader((com.b3dgs.lionengine.Media) a[0]));
         add(com.b3dgs.lionengine.audio.AudioVoidFormat.class, new Class<?>[] {java.util.Collection.class}, a -> new com.b3dgs.lionengine.audio.AudioVoidFormat((java.util.Collection) a[0]));
         add(com.b3dgs.lionengine.game.AnimationsConfig.class, new Class<?>[] {java.util.Map.class}, a -> new com.b3dgs.lionengine.game.AnimationsConfig((java.util.Map) a[0]));
         add(com.b3dgs.lionengine.game.Attribute.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.game.Attribute());
@@ -852,10 +852,10 @@ public final class ReflectRegistry {
         add(com.b3dgs.lionengine.game.feature.ActionableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class}, a -> new com.b3dgs.lionengine.game.feature.ActionableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1]));
         add(com.b3dgs.lionengine.game.feature.ActionableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class}, a -> new com.b3dgs.lionengine.game.feature.ActionableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.AttributesReader) a[2]));
         add(com.b3dgs.lionengine.game.feature.ActionerModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class}, a -> new com.b3dgs.lionengine.game.feature.ActionerModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1]));
-        add(com.b3dgs.lionengine.game.feature.AnimatableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class}, a -> new com.b3dgs.lionengine.game.feature.AnimatableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.AttributesReader) a[2]));
-        add(com.b3dgs.lionengine.game.feature.AnimatableModel.class, new Class<?>[] {com.b3dgs.lionengine.Animator.class, com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class}, a -> new com.b3dgs.lionengine.game.feature.AnimatableModel((com.b3dgs.lionengine.Animator) a[0], (com.b3dgs.lionengine.game.feature.Services) a[1], (com.b3dgs.lionengine.game.feature.Setup) a[2]));
-        add(com.b3dgs.lionengine.game.feature.AnimatableModel.class, new Class<?>[] {com.b3dgs.lionengine.Animator.class, com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class}, a -> new com.b3dgs.lionengine.game.feature.AnimatableModel((com.b3dgs.lionengine.Animator) a[0], (com.b3dgs.lionengine.game.feature.Services) a[1], (com.b3dgs.lionengine.game.feature.Setup) a[2], (com.b3dgs.lionengine.AttributesReader) a[3]));
         add(com.b3dgs.lionengine.game.feature.AnimatableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class}, a -> new com.b3dgs.lionengine.game.feature.AnimatableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1]));
+        add(com.b3dgs.lionengine.game.feature.AnimatableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class}, a -> new com.b3dgs.lionengine.game.feature.AnimatableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.AttributesReader) a[2]));
+        add(com.b3dgs.lionengine.game.feature.AnimatableModel.class, new Class<?>[] {com.b3dgs.lionengine.Animator.class, com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class}, a -> new com.b3dgs.lionengine.game.feature.AnimatableModel((com.b3dgs.lionengine.Animator) a[0], (com.b3dgs.lionengine.game.feature.Services) a[1], (com.b3dgs.lionengine.game.feature.Setup) a[2], (com.b3dgs.lionengine.AttributesReader) a[3]));
+        add(com.b3dgs.lionengine.game.feature.AnimatableModel.class, new Class<?>[] {com.b3dgs.lionengine.Animator.class, com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class}, a -> new com.b3dgs.lionengine.game.feature.AnimatableModel((com.b3dgs.lionengine.Animator) a[0], (com.b3dgs.lionengine.game.feature.Services) a[1], (com.b3dgs.lionengine.game.feature.Setup) a[2]));
         add(com.b3dgs.lionengine.game.feature.Camera.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.game.feature.Camera());
         add(com.b3dgs.lionengine.game.feature.CameraTracker.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class}, a -> new com.b3dgs.lionengine.game.feature.CameraTracker((com.b3dgs.lionengine.game.feature.Services) a[0]));
         add(com.b3dgs.lionengine.game.feature.CameraTracker.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Camera.class}, a -> new com.b3dgs.lionengine.game.feature.CameraTracker((com.b3dgs.lionengine.game.feature.Camera) a[0]));
@@ -890,8 +890,8 @@ public final class ReflectRegistry {
         add(com.b3dgs.lionengine.game.feature.body.BodyModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class}, a -> new com.b3dgs.lionengine.game.feature.body.BodyModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1]));
         add(com.b3dgs.lionengine.game.feature.body.BodyModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class}, a -> new com.b3dgs.lionengine.game.feature.body.BodyModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.AttributesReader) a[2]));
         add(com.b3dgs.lionengine.game.feature.collidable.CollidableConfig.class, new Class<?>[] {java.lang.Integer.class, java.util.Collection.class}, a -> new com.b3dgs.lionengine.game.feature.collidable.CollidableConfig((java.lang.Integer) a[0], (java.util.Collection) a[1]));
-        add(com.b3dgs.lionengine.game.feature.collidable.CollidableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.game.feature.Transformable.class}, a -> new com.b3dgs.lionengine.game.feature.collidable.CollidableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.game.feature.Transformable) a[2]));
         add(com.b3dgs.lionengine.game.feature.collidable.CollidableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class, com.b3dgs.lionengine.game.feature.Transformable.class}, a -> new com.b3dgs.lionengine.game.feature.collidable.CollidableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.AttributesReader) a[2], (com.b3dgs.lionengine.game.feature.Transformable) a[3]));
+        add(com.b3dgs.lionengine.game.feature.collidable.CollidableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.game.feature.Transformable.class}, a -> new com.b3dgs.lionengine.game.feature.collidable.CollidableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.game.feature.Transformable) a[2]));
         add(com.b3dgs.lionengine.game.feature.collidable.CollisionConfig.class, new Class<?>[] {java.util.Map.class}, a -> new com.b3dgs.lionengine.game.feature.collidable.CollisionConfig((java.util.Map) a[0]));
         add(com.b3dgs.lionengine.game.feature.collidable.CollisionCouple.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.collidable.Collision.class, com.b3dgs.lionengine.game.feature.collidable.Collision.class}, a -> new com.b3dgs.lionengine.game.feature.collidable.CollisionCouple((com.b3dgs.lionengine.game.feature.collidable.Collision) a[0], (com.b3dgs.lionengine.game.feature.collidable.Collision) a[1]));
         add(com.b3dgs.lionengine.game.feature.collidable.ComponentCollision.class, new Class<?>[] {com.b3dgs.lionengine.Viewer.class}, a -> new com.b3dgs.lionengine.game.feature.collidable.ComponentCollision((com.b3dgs.lionengine.Viewer) a[0]));
@@ -906,8 +906,8 @@ public final class ReflectRegistry {
         add(com.b3dgs.lionengine.game.feature.collidable.selector.SelectorRefresher.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.collidable.selector.SelectorModel.class}, a -> new com.b3dgs.lionengine.game.feature.collidable.selector.SelectorRefresher((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.collidable.selector.SelectorModel) a[1]));
         add(com.b3dgs.lionengine.game.feature.launchable.LaunchableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.game.feature.Transformable.class}, a -> new com.b3dgs.lionengine.game.feature.launchable.LaunchableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.game.feature.Transformable) a[2]));
         add(com.b3dgs.lionengine.game.feature.launchable.LaunchableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class, com.b3dgs.lionengine.game.feature.Transformable.class}, a -> new com.b3dgs.lionengine.game.feature.launchable.LaunchableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.AttributesReader) a[2], (com.b3dgs.lionengine.game.feature.Transformable) a[3]));
-        add(com.b3dgs.lionengine.game.feature.launchable.LauncherModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class}, a -> new com.b3dgs.lionengine.game.feature.launchable.LauncherModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.AttributesReader) a[2]));
         add(com.b3dgs.lionengine.game.feature.launchable.LauncherModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class}, a -> new com.b3dgs.lionengine.game.feature.launchable.LauncherModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1]));
+        add(com.b3dgs.lionengine.game.feature.launchable.LauncherModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class}, a -> new com.b3dgs.lionengine.game.feature.launchable.LauncherModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.AttributesReader) a[2]));
         add(com.b3dgs.lionengine.game.feature.networkable.ComponentNetwork.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class}, a -> new com.b3dgs.lionengine.game.feature.networkable.ComponentNetwork((com.b3dgs.lionengine.game.feature.Services) a[0]));
         add(com.b3dgs.lionengine.game.feature.networkable.IdentifiableCreate.class, new Class<?>[] {java.lang.Integer.class, com.b3dgs.lionengine.game.feature.Featurable.class}, a -> new com.b3dgs.lionengine.game.feature.networkable.IdentifiableCreate((java.lang.Integer) a[0], (com.b3dgs.lionengine.game.feature.Featurable) a[1]));
         add(com.b3dgs.lionengine.game.feature.networkable.NetworkableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class}, a -> new com.b3dgs.lionengine.game.feature.networkable.NetworkableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1]));
@@ -944,16 +944,16 @@ public final class ReflectRegistry {
         add(com.b3dgs.lionengine.game.feature.tile.map.collision.TileCollidableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.game.feature.Transformable.class}, a -> new com.b3dgs.lionengine.game.feature.tile.map.collision.TileCollidableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.game.feature.Transformable) a[2]));
         add(com.b3dgs.lionengine.game.feature.tile.map.extractable.ExtractableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.game.feature.Transformable.class}, a -> new com.b3dgs.lionengine.game.feature.tile.map.extractable.ExtractableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.game.feature.Transformable) a[2]));
         add(com.b3dgs.lionengine.game.feature.tile.map.extractable.ExtractorListenerVoid.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.game.feature.tile.map.extractable.ExtractorListenerVoid());
-        add(com.b3dgs.lionengine.game.feature.tile.map.extractable.ExtractorModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class}, a -> new com.b3dgs.lionengine.game.feature.tile.map.extractable.ExtractorModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.AttributesReader) a[2]));
         add(com.b3dgs.lionengine.game.feature.tile.map.extractable.ExtractorModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class}, a -> new com.b3dgs.lionengine.game.feature.tile.map.extractable.ExtractorModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1]));
+        add(com.b3dgs.lionengine.game.feature.tile.map.extractable.ExtractorModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class}, a -> new com.b3dgs.lionengine.game.feature.tile.map.extractable.ExtractorModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.AttributesReader) a[2]));
         add(com.b3dgs.lionengine.game.feature.tile.map.pathfinding.HeuristicClosest.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.game.feature.tile.map.pathfinding.HeuristicClosest());
         add(com.b3dgs.lionengine.game.feature.tile.map.pathfinding.HeuristicClosestSquared.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.game.feature.tile.map.pathfinding.HeuristicClosestSquared());
         add(com.b3dgs.lionengine.game.feature.tile.map.pathfinding.MapTilePathModel.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.game.feature.tile.map.pathfinding.MapTilePathModel());
         add(com.b3dgs.lionengine.game.feature.tile.map.pathfinding.Path.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.game.feature.tile.map.pathfinding.Path());
         add(com.b3dgs.lionengine.game.feature.tile.map.pathfinding.PathCategory.class, new Class<?>[] {java.lang.String.class, java.util.Collection.class}, a -> new com.b3dgs.lionengine.game.feature.tile.map.pathfinding.PathCategory((java.lang.String) a[0], (java.util.Collection) a[1]));
         add(com.b3dgs.lionengine.game.feature.tile.map.pathfinding.PathfindableListenerVoid.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.game.feature.tile.map.pathfinding.PathfindableListenerVoid());
-        add(com.b3dgs.lionengine.game.feature.tile.map.pathfinding.PathfindableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.game.feature.Identifiable.class, com.b3dgs.lionengine.game.feature.Transformable.class}, a -> new com.b3dgs.lionengine.game.feature.tile.map.pathfinding.PathfindableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.game.feature.Identifiable) a[2], (com.b3dgs.lionengine.game.feature.Transformable) a[3]));
         add(com.b3dgs.lionengine.game.feature.tile.map.pathfinding.PathfindableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.AttributesReader.class, com.b3dgs.lionengine.game.feature.Identifiable.class, com.b3dgs.lionengine.game.feature.Transformable.class}, a -> new com.b3dgs.lionengine.game.feature.tile.map.pathfinding.PathfindableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.AttributesReader) a[2], (com.b3dgs.lionengine.game.feature.Identifiable) a[3], (com.b3dgs.lionengine.game.feature.Transformable) a[4]));
+        add(com.b3dgs.lionengine.game.feature.tile.map.pathfinding.PathfindableModel.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.game.feature.Identifiable.class, com.b3dgs.lionengine.game.feature.Transformable.class}, a -> new com.b3dgs.lionengine.game.feature.tile.map.pathfinding.PathfindableModel((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.game.feature.Identifiable) a[2], (com.b3dgs.lionengine.game.feature.Transformable) a[3]));
         add(com.b3dgs.lionengine.game.feature.tile.map.persister.MapTilePersisterModel.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.game.feature.tile.map.persister.MapTilePersisterModel());
         add(com.b3dgs.lionengine.game.feature.tile.map.raster.MapTileRasteredModel.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.game.feature.tile.map.raster.MapTileRasteredModel());
         add(com.b3dgs.lionengine.game.feature.tile.map.transition.GroupTransition.class, new Class<?>[] {java.lang.String.class, java.lang.String.class}, a -> new com.b3dgs.lionengine.game.feature.tile.map.transition.GroupTransition((java.lang.String) a[0], (java.lang.String) a[1]));
@@ -1009,8 +1009,8 @@ public final class ReflectRegistry {
         add(com.b3dgs.lionengine.web.graphic.FactoryGraphicWeb.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.web.graphic.FactoryGraphicWeb());
         add(com.b3dgs.lionengine.web.graphic.GraphicWeb.class, new Class<?>[] {org.teavm.jso.canvas.CanvasRenderingContext2D.class}, a -> new com.b3dgs.lionengine.web.graphic.GraphicWeb((org.teavm.jso.canvas.CanvasRenderingContext2D) a[0]));
         add(com.b3dgs.lionengine.web.graphic.GraphicWeb.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.web.graphic.GraphicWeb());
-        add(com.b3dgs.lionengine.web.graphic.ImageBufferWeb.class, new Class<?>[] {org.teavm.jso.dom.html.HTMLCanvasElement.class, com.b3dgs.lionengine.graphic.Transparency.class}, a -> new com.b3dgs.lionengine.web.graphic.ImageBufferWeb((org.teavm.jso.dom.html.HTMLCanvasElement) a[0], (com.b3dgs.lionengine.graphic.Transparency) a[1]));
         add(com.b3dgs.lionengine.web.graphic.ImageBufferWeb.class, new Class<?>[] {org.teavm.jso.dom.html.HTMLCanvasElement.class}, a -> new com.b3dgs.lionengine.web.graphic.ImageBufferWeb((org.teavm.jso.dom.html.HTMLCanvasElement) a[0]));
+        add(com.b3dgs.lionengine.web.graphic.ImageBufferWeb.class, new Class<?>[] {org.teavm.jso.dom.html.HTMLCanvasElement.class, com.b3dgs.lionengine.graphic.Transparency.class}, a -> new com.b3dgs.lionengine.web.graphic.ImageBufferWeb((org.teavm.jso.dom.html.HTMLCanvasElement) a[0], (com.b3dgs.lionengine.graphic.Transparency) a[1]));
         add(com.b3dgs.lionengine.web.graphic.ScreenWeb.class, new Class<?>[] {com.b3dgs.lionengine.Config.class}, a -> new com.b3dgs.lionengine.web.graphic.ScreenWeb((com.b3dgs.lionengine.Config) a[0]));
         add(com.b3dgs.lionengine.web.graphic.TransformWeb.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.web.graphic.TransformWeb());
         add(com.b3dgs.lionengine.web.xml.DocumentProviderWeb.class, new Class<?>[] {}, a -> new com.b3dgs.lionengine.web.xml.DocumentProviderWeb());
@@ -1132,9 +1132,9 @@ public final class ReflectRegistry {
         add(com.b3dgs.lionheart.object.feature.NorkaTransform.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.game.feature.Animatable.class, com.b3dgs.lionengine.game.feature.Identifiable.class}, a -> new com.b3dgs.lionheart.object.feature.NorkaTransform((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.game.feature.Animatable) a[2], (com.b3dgs.lionengine.game.feature.Identifiable) a[3]));
         add(com.b3dgs.lionheart.object.feature.NorkaWalk.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.game.feature.Transformable.class, com.b3dgs.lionengine.game.feature.Animatable.class, com.b3dgs.lionengine.game.feature.Identifiable.class}, a -> new com.b3dgs.lionheart.object.feature.NorkaWalk((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.game.feature.Transformable) a[2], (com.b3dgs.lionengine.game.feature.Animatable) a[3], (com.b3dgs.lionengine.game.feature.Identifiable) a[4]));
         add(com.b3dgs.lionheart.object.feature.Patrol.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionheart.object.EntityModel.class, com.b3dgs.lionengine.game.feature.state.StateHandler.class, com.b3dgs.lionengine.game.feature.collidable.Collidable.class, com.b3dgs.lionengine.game.feature.Mirrorable.class, com.b3dgs.lionengine.game.feature.Transformable.class, com.b3dgs.lionengine.game.feature.rasterable.Rasterable.class, com.b3dgs.lionheart.object.feature.Stats.class, com.b3dgs.lionheart.object.feature.Patrols.class, com.b3dgs.lionengine.game.feature.networkable.Networkable.class}, a -> new com.b3dgs.lionheart.object.feature.Patrol((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionheart.object.EntityModel) a[2], (com.b3dgs.lionengine.game.feature.state.StateHandler) a[3], (com.b3dgs.lionengine.game.feature.collidable.Collidable) a[4], (com.b3dgs.lionengine.game.feature.Mirrorable) a[5], (com.b3dgs.lionengine.game.feature.Transformable) a[6], (com.b3dgs.lionengine.game.feature.rasterable.Rasterable) a[7], (com.b3dgs.lionheart.object.feature.Stats) a[8], (com.b3dgs.lionheart.object.feature.Patrols) a[9], (com.b3dgs.lionengine.game.feature.networkable.Networkable) a[10]));
-        add(com.b3dgs.lionheart.object.feature.PatrolConfig.class, new Class<?>[] {java.util.OptionalDouble.class, java.util.OptionalDouble.class, java.util.OptionalInt.class, java.util.OptionalInt.class, java.util.Optional.class, java.util.Optional.class, java.util.OptionalInt.class, java.util.OptionalInt.class, java.util.OptionalInt.class, java.util.OptionalInt.class, java.util.Optional.class}, a -> new com.b3dgs.lionheart.object.feature.PatrolConfig((java.util.OptionalDouble) a[0], (java.util.OptionalDouble) a[1], (java.util.OptionalInt) a[2], (java.util.OptionalInt) a[3], (java.util.Optional) a[4], (java.util.Optional) a[5], (java.util.OptionalInt) a[6], (java.util.OptionalInt) a[7], (java.util.OptionalInt) a[8], (java.util.OptionalInt) a[9], (java.util.Optional) a[10]));
-        add(com.b3dgs.lionheart.object.feature.PatrolConfig.class, new Class<?>[] {}, a -> new com.b3dgs.lionheart.object.feature.PatrolConfig());
         add(com.b3dgs.lionheart.object.feature.PatrolConfig.class, new Class<?>[] {com.b3dgs.lionengine.AttributesReader.class}, a -> new com.b3dgs.lionheart.object.feature.PatrolConfig((com.b3dgs.lionengine.AttributesReader) a[0]));
+        add(com.b3dgs.lionheart.object.feature.PatrolConfig.class, new Class<?>[] {}, a -> new com.b3dgs.lionheart.object.feature.PatrolConfig());
+        add(com.b3dgs.lionheart.object.feature.PatrolConfig.class, new Class<?>[] {java.util.OptionalDouble.class, java.util.OptionalDouble.class, java.util.OptionalInt.class, java.util.OptionalInt.class, java.util.Optional.class, java.util.Optional.class, java.util.OptionalInt.class, java.util.OptionalInt.class, java.util.OptionalInt.class, java.util.OptionalInt.class, java.util.Optional.class}, a -> new com.b3dgs.lionheart.object.feature.PatrolConfig((java.util.OptionalDouble) a[0], (java.util.OptionalDouble) a[1], (java.util.OptionalInt) a[2], (java.util.OptionalInt) a[3], (java.util.Optional) a[4], (java.util.Optional) a[5], (java.util.OptionalInt) a[6], (java.util.OptionalInt) a[7], (java.util.OptionalInt) a[8], (java.util.OptionalInt) a[9], (java.util.Optional) a[10]));
         add(com.b3dgs.lionheart.object.feature.Patrols.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class}, a -> new com.b3dgs.lionheart.object.feature.Patrols((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1]));
         add(com.b3dgs.lionheart.object.feature.Pillar.class, new Class<?>[] {com.b3dgs.lionengine.game.feature.Services.class, com.b3dgs.lionengine.game.feature.Setup.class, com.b3dgs.lionengine.game.feature.Transformable.class, com.b3dgs.lionengine.game.feature.rasterable.Rasterable.class, com.b3dgs.lionengine.game.feature.collidable.Collidable.class, com.b3dgs.lionengine.game.feature.Identifiable.class}, a -> new com.b3dgs.lionheart.object.feature.Pillar((com.b3dgs.lionengine.game.feature.Services) a[0], (com.b3dgs.lionengine.game.feature.Setup) a[1], (com.b3dgs.lionengine.game.feature.Transformable) a[2], (com.b3dgs.lionengine.game.feature.rasterable.Rasterable) a[3], (com.b3dgs.lionengine.game.feature.collidable.Collidable) a[4], (com.b3dgs.lionengine.game.feature.Identifiable) a[5]));
         add(com.b3dgs.lionheart.object.feature.PillarConfig.class, new Class<?>[] {com.b3dgs.lionengine.AttributesReader.class}, a -> new com.b3dgs.lionheart.object.feature.PillarConfig((com.b3dgs.lionengine.AttributesReader) a[0]));
@@ -1231,6 +1231,6 @@ public final class ReflectRegistry {
     }
 
     private ReflectRegistry() {
-        // Hilfsklasse
+        // Utility class
     }
 }

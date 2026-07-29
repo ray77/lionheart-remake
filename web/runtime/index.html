@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><title>Lionheart im Browser</title>
+<html lang="en"><head><meta charset="utf-8"><title>Lionheart Remake in the browser</title>
 <style>
 body{background:#0b0d1a;color:#e7ecff;font-family:system-ui;padding:12px;margin:0}
 #out{font:12px ui-monospace,monospace;color:#7dffa0;line-height:1.4;max-height:90px;overflow:auto}
@@ -11,7 +11,7 @@ canvas{image-rendering:pixelated;background:#000;border:1px solid #22d3ee44}
 <div id="err"></div>
 <canvas id="lionengine" width="640" height="480"></canvas>
 <script>
-  // Nur die Fehler DIESER Runde anzeigen
+  // Show only the errors of THIS run
   (function(){
     var box = document.getElementById('err');
     var orig = console.error.bind(console);

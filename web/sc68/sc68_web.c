@@ -1,9 +1,8 @@
-/* Schmale Hülle um sc68 für den Browser.
+/* Thin wrapper around sc68 for the browser.
  *
- * sc68 ist abrufend gebaut: api68_process() füllt einen PCM-Puffer, so oft man
- * will. Das passt genau auf eine Web-Tonquelle, die sich ihre Häppchen holt,
- * wenn sie welche braucht. Deshalb wird hier nichts vorgerendert - die Musik
- * läuft endlos weiter und die Schleifenübergänge bleiben nahtlos.
+ * sc68 is pull based: api68_process() fills a PCM buffer whenever asked. That
+ * matches a web audio source pulling its chunks when it needs them, so nothing
+ * is rendered ahead - the music keeps going and loop points stay seamless.
  */
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +13,7 @@
 static api68_t *sc68 = 0;
 static int rate_used = 0;
 
-/* Anlegen. Liefert die tatsächlich benutzte Abtastrate, 0 bei Fehler. */
+/* Create. Returns the sampling rate actually used, 0 on failure. */
 EMSCRIPTEN_KEEPALIVE
 int sc68w_open(int rate)
 {
@@ -36,11 +35,11 @@ int sc68w_open(int rate)
     return rate_used;
 }
 
-/* Ein Stück aus dem Speicher laden. 0 = in Ordnung.
+/* Load a track from memory. 0 means fine.
  *
- * Erst auswerfen: sc68 weist ein zweites Laden ab, solange noch etwas eingelegt
- * ist ("disk is already loaded"), und api68_stop() wirft nicht aus. Ohne das
- * spielt nur das allererste Stück einer Sitzung.
+ * Eject first: sc68 refuses a second load while something is still in ("disk is
+ * already loaded"), and api68_stop() does not eject. Without this only the very
+ * first track of a session ever plays.
  */
 EMSCRIPTEN_KEEPALIVE
 int sc68w_load(const void *buf, int len)
@@ -52,7 +51,7 @@ int sc68w_load(const void *buf, int len)
     return api68_load_mem(sc68, buf, len);
 }
 
-/* Spur starten (1 = erste). */
+/* Start a track (1 is the first). */
 EMSCRIPTEN_KEEPALIVE
 int sc68w_play(int track)
 {
@@ -62,7 +61,7 @@ int sc68w_play(int track)
     return api68_play(sc68, track);
 }
 
-/* PCM abholen: frames Bilder, stereo 16 Bit. Liefert den sc68-Status. */
+/* Pull PCM: frames frames, stereo 16 bit. Returns the sc68 status. */
 EMSCRIPTEN_KEEPALIVE
 int sc68w_render(void *dst, int frames)
 {

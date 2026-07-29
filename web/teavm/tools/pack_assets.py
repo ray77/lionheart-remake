@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
-"""Baut das Datenpaket fuer den Browser-Lauf.
+"""Builds the asset pack for the browser build.
 
-Der Browser kann kein Verzeichnis lesen, darum kommt alles in eine einzige
-Datei (assets.pak) plus ein Verzeichnis (assets.lst):
+A browser cannot list a directory, so everything goes into one file
+(assets.pak) plus an index (assets.lst):
 
-    D <offset> <laenge> <pfad>   Rohbytes, liegen im Paket
-    I <pfad>                     zusaetzlich als Bild zu laden
+    D <offset> <length> <path>   raw bytes, inside the pack
+    I <path>                     additionally to be loaded as an image
 
-Bilder stehen doppelt drin: die Zeichenschicht braucht das vom Browser
-dekodierte Bild, der Motor liest bei manchen Dateien aber auch die Rohbytes
-(Groesse aus dem PNG-Kopf), darum sind sie ebenfalls im Paket.
+Images appear twice: the drawing layer needs the image decoded by the browser,
+while the engine reads the raw bytes of some files as well (size from the PNG
+header), so they are in the pack too.
 
-Nebenbei werden die Belegungsdateien angepasst: sie zeigen im Original auf die
-Desktop-Eingabeklassen, die es im Browser nicht gibt.
+On the way the input mappings are rewritten: they name the desktop input
+classes, which do not exist in a browser.
 """
-
 import os
 import re
 import sys
 
-# Desktop-Eingabeklassen -> Browser-Gegenstuecke.
+# Desktop input classes -> browser counterparts.
 DEVICE_SWAP = {
     "com.b3dgs.lionengine.awt.Keyboard": "com.b3dgs.lionengine.web.KeyboardWeb",
     "com.b3dgs.lionengine.awt.Mouse": "com.b3dgs.lionengine.web.MouseWeb",
 }
-# Geraete, die es im Browser nicht gibt: ganzer Block faellt weg.
+# Devices a browser does not have: the whole block is dropped.
 DEVICE_DROP = ("com.b3dgs.lionheart.Gamepad",)
 
 DEVICE_BLOCK = re.compile(
@@ -35,7 +34,7 @@ DEVICE_BLOCK = re.compile(
 
 
 def patch_input(text):
-    """Belegung auf die Browser-Eingabeklassen umschreiben."""
+    """Rewrite the mapping onto the browser input classes."""
 
     def keep(match):
         if match.group("cls") in DEVICE_DROP:
@@ -87,7 +86,7 @@ def main():
     with open(os.path.join(out, "assets.lst"), "w") as lst:
         lst.write("\n".join(lines) + "\n")
 
-    print("%d Dateien, %d Bilder, %.1f MB, %d Belegungen angepasst"
+    print("%d files, %d images, %.1f MB, %d mappings rewritten"
           % (len(paths), sum(1 for r, _ in paths if r.lower().endswith(".png")),
              offset / 1048576.0, patched))
 
