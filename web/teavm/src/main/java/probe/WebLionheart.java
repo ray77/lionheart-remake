@@ -51,6 +51,8 @@ public final class WebLionheart {
     private static final String LANG_FILE = "lang.txt";
     /** Key in the address asking for the progress lines. */
     private static final String KEY_LOG = "log";
+    /** How many pictures between two progress reports. */
+    private static final int PROGRESS_EVERY = 16;
 
     /** Whether progress lines are written, set from the address at startup. */
     private static boolean logging;
@@ -82,6 +84,13 @@ public final class WebLionheart {
             }
             status(data + " data files unpacked, language " + selectLanguage() + ", loading images…");
 
+            int toDecode = 0;
+            for (String line : lines) {
+                if (line.length() > 2 && line.charAt(0) == 'I') {
+                    toDecode++;
+                }
+            }
+            int seen = 0;
             for (String line : lines) {
                 if (line.length() > 2 && line.charAt(0) == 'I') {
                     String path = line.substring(2);
@@ -90,9 +99,16 @@ public final class WebLionheart {
                         FactoryGraphicWeb.registerImage(path, img);
                         images++;
                     }
+                    seen++;
+                    /* Not every one of them - the report itself would then cost more than the
+                     * decoding, and the bar cannot show a hundredth of a pixel anyway. */
+                    if (seen % PROGRESS_EVERY == 0 || seen == toDecode) {
+                        progress("images", seen, toDecode);
+                    }
                 }
             }
             status(data + " data + " + images + " images loaded — starting game…");
+            progress("start", 1, 1);
             boot();
         } catch (Throwable t) {
             status("ERROR: " + t);
@@ -123,8 +139,33 @@ public final class WebLionheart {
                 callback.complete(out);
             }
         });
+        watchProgress(xhr);
         xhr.send();
     }
+
+    /**
+     * Tell the page how far the loading has got, if anyone is listening.
+     * <p>
+     * A quarter of the download is data and the rest is pictures, and together they take long
+     * enough that a blank frame looks broken. What the page makes of it is its own business - a
+     * bar, a line of text, nothing at all.
+     *
+     * @param phase What is being loaded: "data" or "images".
+     * @param done How much of it is there.
+     * @param total How much there is in all, 0 when not known yet.
+     */
+    @JSBody(params = {"phase", "done", "total"},
+            script = "if (typeof window.onLionheartProgress === 'function') {"
+                     + " try { window.onLionheartProgress(phase, done, total); } catch (e) {} }")
+    private static native void progress(String phase, double done, double total);
+
+    /** Report the bytes of a request as they arrive. */
+    @JSBody(params = "request",
+            script = "request.onprogress = function (e) {"
+                     + " if (typeof window.onLionheartProgress === 'function') {"
+                     + "  try { window.onLionheartProgress('data', e.loaded,"
+                     + "        e.lengthComputable ? e.total : 0); } catch (err) {} } };")
+    private static native void watchProgress(JSObject request);
 
     /** Load an image, suspending until it is decoded. */
     @Async
@@ -164,6 +205,8 @@ public final class WebLionheart {
 
             /* The game logic runs at 50 Hz as on the Amiga, rendering happens as often as the
              * browser allows. The desktop keeps the two apart the same way (LoopHybrid). */
+            com.b3dgs.lionheart.Score.setEndListener(WebLionheart::reportScore);
+
             com.b3dgs.lionheart.Util.setLoopSupplier(
                 () -> new com.b3dgs.lionengine.web.LoopWeb(com.b3dgs.lionheart.Constant.RESOLUTION.rate()));
 
@@ -303,6 +346,18 @@ public final class WebLionheart {
     /** Get the language the browser is set to, as a tag like "de" or "de-DE". */
     @JSBody(params = {}, script = "return navigator.language || '';")
     private static native String browserLang();
+
+    /**
+     * Hand the final score to the page, once a run has ended.
+     * <p>
+     * The page decides what to do with it - a leaderboard host defines
+     * {@code window.onLionheartGameOver}, a plain build has nobody listening. The game itself
+     * knows nothing about any of that; it only says that a run ended and what it was worth.
+     */
+    @JSBody(params = "score",
+            script = "if (typeof window.onLionheartGameOver === 'function') {"
+                     + " try { window.onLionheartGameOver(score); } catch (e) {} }")
+    private static native void reportScore(int score);
 
     /**
      * Choose the language and write it into the settings.

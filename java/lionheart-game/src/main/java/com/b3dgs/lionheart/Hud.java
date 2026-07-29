@@ -421,9 +421,12 @@ public final class Hud implements Resource, Updatable, Renderable
         {
             progressMax = viewer.getX();
         }
-        numberScore.setValue((int) (progressMax / SCORE_TILE) * SCORE_PER_TILE
-                             + stats.getTalisment() * SCORE_PER_TALISMAN
-                             + stats.getLife() * SCORE_PER_LIFE);
+        /* What this stage is worth. The total shown is the whole run, since the hud is built anew
+         * for every stage and the count would otherwise start from zero fourteen times. */
+        Score.setCurrent((int) (progressMax / SCORE_TILE) * SCORE_PER_TILE
+                         + stats.getTalisment() * SCORE_PER_TALISMAN
+                         + stats.getLife() * SCORE_PER_LIFE);
+        numberScore.setValue(Score.get());
     }
 
     /**

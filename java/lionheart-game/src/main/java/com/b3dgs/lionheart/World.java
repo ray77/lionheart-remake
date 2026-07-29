@@ -1391,6 +1391,9 @@ final class World extends WorldHelper implements MusicPlayer, LoadNextStage
     @Override
     public void loadNextStage(String next, int delayMs, Optional<Coord> spawn)
     {
+        /* Put this stage's score away before the next hud starts counting from zero again. */
+        Score.bank();
+
         if (game.getType().is(GameType.STORY))
         {
             if (delayMs > 0)

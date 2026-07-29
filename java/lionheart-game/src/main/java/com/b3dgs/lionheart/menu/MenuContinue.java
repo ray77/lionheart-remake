@@ -32,6 +32,7 @@ import com.b3dgs.lionheart.DeviceMapping;
 import com.b3dgs.lionheart.GameConfig;
 import com.b3dgs.lionheart.InitConfig;
 import com.b3dgs.lionheart.Scene;
+import com.b3dgs.lionheart.Score;
 import com.b3dgs.lionheart.Util;
 import com.b3dgs.lionheart.constant.Folder;
 import com.b3dgs.lionheart.menu.MenuContinue.Type;
@@ -224,6 +225,14 @@ public final class MenuContinue extends Menu<Type>
         }
         else
         {
+            /* Turned the continue screen down: the run is over here, not only when the last credit
+             * is gone. Both roads lead back to the main menu and both have to be counted, which is
+             * why Score only lets the first one through. */
+            final InitConfig init = config.getInit();
+            if (init == null || !init.isCheats())
+            {
+                Score.notifyRunEnded();
+            }
             end(MenuGame.class, config);
         }
     }

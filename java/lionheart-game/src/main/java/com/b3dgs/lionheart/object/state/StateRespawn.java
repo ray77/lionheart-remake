@@ -31,6 +31,7 @@ import com.b3dgs.lionheart.GameConfig;
 import com.b3dgs.lionheart.GameType;
 import com.b3dgs.lionheart.InitConfig;
 import com.b3dgs.lionheart.LoadNextStage;
+import com.b3dgs.lionheart.Score;
 import com.b3dgs.lionheart.StageConfig;
 import com.b3dgs.lionheart.landscape.Landscape;
 import com.b3dgs.lionheart.menu.MenuContinue;
@@ -91,6 +92,13 @@ public final class StateRespawn extends State
                 }
                 else
                 {
+                    /* Out of lives and out of credits: the run is over. Told once, and only for a
+                     * run played straight - a leaderboard has no use for a score reached with the
+                     * cheats on, whether they were asked for at the start or switched on later. */
+                    if (!cheats)
+                    {
+                        Score.notifyRunEnded();
+                    }
                     sequencer.end(MenuGame.class, model.getServices().get(GameConfig.class));
                 }
             }

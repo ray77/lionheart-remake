@@ -46,6 +46,7 @@ import com.b3dgs.lionheart.Music;
 import com.b3dgs.lionheart.Scene;
 import com.b3dgs.lionheart.SceneBlack;
 import com.b3dgs.lionheart.ScenePicture;
+import com.b3dgs.lionheart.Score;
 import com.b3dgs.lionheart.Settings;
 import com.b3dgs.lionheart.StageConfig;
 import com.b3dgs.lionheart.Util;
@@ -307,6 +308,8 @@ public class MenuGame extends Menu<Type>
      */
     private void startNewGame()
     {
+        Score.reset();
+
         final boolean hard = difficulty > Difficulty.NORMAL.ordinal();
         final String suffix = hard ? Constant.STAGE_HARD_SUFFIX : com.b3dgs.lionengine.Constant.EMPTY_STRING;
         Media stage = Medias.create(Folder.STAGE, Folder.STORY, config.getStages().get(), "stage1" + suffix + ".xml");

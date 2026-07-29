@@ -8,8 +8,27 @@ body{background:#0b0d1a;color:#e7ecff;font-family:system-ui;padding:12px;margin:
 #out{color:#7dffa0}
 #err{color:#ff9090;margin:6px 0}
 canvas{image-rendering:pixelated;background:#000;border:1px solid #22d3ee44}
+
+/* Loading screen. A 25 MB pack and 669 pictures take long enough that a blank
+   frame reads as broken, so say what is happening and how far it has got. */
+#load{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:14px;background:#05060d;color:#e7ecff;
+      font:14px/1.5 system-ui;z-index:20;transition:opacity .45s ease}
+#load.gone{opacity:0;pointer-events:none}
+#load h1{margin:0;font:600 22px/1.2 system-ui;letter-spacing:.14em;color:#d9b451}
+#load .sub{color:#7b86a8;font-size:12px;letter-spacing:.06em}
+#load .bar{width:min(320px,60vw);height:6px;border-radius:3px;background:#1a1f33;overflow:hidden}
+#load .bar i{display:block;height:100%;width:0;border-radius:3px;
+             background:linear-gradient(90deg,#8a6a1f,#d9b451);transition:width .2s ease}
+#load .pct{font:12px ui-monospace,monospace;color:#5c6688}
 </style></head>
 <body>
+<div id="load">
+  <h1>LIONHEART</h1>
+  <div class="bar"><i id="loadbar"></i></div>
+  <div class="sub" id="loadtext">loading…</div>
+  <div class="pct" id="loadpct"></div>
+</div>
 <div id="out"></div>
 <div id="err"></div>
 <canvas id="lionengine" width="640" height="480"></canvas>
@@ -38,6 +57,57 @@ canvas{image-rendering:pixelated;background:#000;border:1px solid #22d3ee44}
       box.appendChild(st);
     });
   })();
+</script>
+<script>
+// Loading screen. The game reports where it is through window.onLionheartProgress:
+// "data" while the pack comes down (bytes), "images" while they are decoded
+// (count), "start" once it hands over to the engine. Data is about a quarter of
+// the wait and the pictures the rest, so the two are weighted into one bar
+// rather than letting it fill up and reset.
+(function () {
+  var DATA_SHARE = 0.25;
+  var box  = document.getElementById('load');
+  var bar  = document.getElementById('loadbar');
+  var text = document.getElementById('loadtext');
+  var pct  = document.getElementById('loadpct');
+  var lang = (location.search.match(/[?&]lang=([a-z]{2})/i) || [])[1];
+  if (!lang) { lang = (navigator.language || 'en').slice(0, 2); }
+  var WORDS = {
+    de: {data: 'Daten werden geladen', images: 'Grafiken werden entpackt', start: 'Start'},
+    fr: {data: 'chargement des données', images: 'décodage des images',     start: 'démarrage'},
+    es: {data: 'cargando datos',         images: 'descomprimiendo imágenes', start: 'iniciando'},
+    it: {data: 'caricamento dati',       images: 'decodifica immagini',      start: 'avvio'},
+    pt: {data: 'a carregar dados',       images: 'a descodificar imagens',   start: 'a iniciar'},
+    en: {data: 'loading data',           images: 'decoding images',          start: 'starting'}
+  };
+  var words = WORDS[lang] || WORDS.en;
+
+  function show(share, label) {
+    var p = Math.max(0, Math.min(1, share));
+    bar.style.width = (p * 100).toFixed(1) + '%';
+    text.textContent = label;
+    pct.textContent = Math.round(p * 100) + '%';
+  }
+
+  window.onLionheartProgress = function (phase, done, total) {
+    if (phase === 'start') {
+      show(1, words.start);
+      box.classList.add('gone');
+      setTimeout(function () { box.style.display = 'none'; }, 500);
+      return;
+    }
+    if (phase === 'data') {
+      // No content-length on a chunked response: keep the bar honest by
+      // creeping towards the share instead of inventing a percentage.
+      var share = total > 0 ? (done / total) : (1 - 1 / (1 + done / 6e6));
+      show(share * DATA_SHARE, words.data);
+      return;
+    }
+    if (phase === 'images' && total > 0) {
+      show(DATA_SHARE + (done / total) * (1 - DATA_SHARE), words.images);
+    }
+  };
+})();
 </script>
 <script src="sc68.js"></script>
 <script src="sc68player.js"></script>
