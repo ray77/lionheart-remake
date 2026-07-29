@@ -1,4 +1,5 @@
 Difficoltà
 Joystick
 Soundtest
+Lingua
 Fatto

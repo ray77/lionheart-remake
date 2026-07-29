@@ -1,5 +1,7 @@
 /bin
 /target
+# Assembled browser build: maven output plus a 25 MB asset pack, all derived.
+web/teavm/target
 /doc
 /build
 /dist

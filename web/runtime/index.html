@@ -2,8 +2,11 @@
 <html lang="en"><head><meta charset="utf-8"><title>Lionheart Remake in the browser</title>
 <style>
 body{background:#0b0d1a;color:#e7ecff;font-family:system-ui;padding:12px;margin:0}
-#out{font:12px ui-monospace,monospace;color:#7dffa0;line-height:1.4;max-height:90px;overflow:auto}
-#err{font:12px ui-monospace,monospace;color:#ff9090;line-height:1.4;max-height:90px;overflow:auto;margin:6px 0}
+/* Both stay out of the way until there is something to say: the progress lines only
+   when the address carries ?log, the errors whenever one happens. */
+#out,#err{display:none;font:12px ui-monospace,monospace;line-height:1.4;max-height:90px;overflow:auto}
+#out{color:#7dffa0}
+#err{color:#ff9090;margin:6px 0}
 canvas{image-rendering:pixelated;background:#000;border:1px solid #22d3ee44}
 </style></head>
 <body>
@@ -15,20 +18,23 @@ canvas{image-rendering:pixelated;background:#000;border:1px solid #22d3ee44}
   (function(){
     var box = document.getElementById('err');
     var orig = console.error.bind(console);
+    function show(){ box.style.display = 'block'; }
     console.error = function(){
       var line = document.createElement('div');
       line.textContent = Array.prototype.join.call(arguments, ' ').substring(0, 220);
+      show();
       box.appendChild(line);
       orig.apply(null, arguments);
     };
     window.addEventListener('error', function(e){
       var line = document.createElement('div');
       line.textContent = 'JS: ' + e.message;
+      show();
       box.appendChild(line);
       var st = document.createElement('pre');
       st.id = 'stack';
       st.style.cssText = 'font:11px monospace;color:#ffd090;white-space:pre-wrap';
-      st.textContent = (e.error && e.error.stack) || '(kein Stapel)';
+      st.textContent = (e.error && e.error.stack) || '(no stack)';
       box.appendChild(st);
     });
   })();

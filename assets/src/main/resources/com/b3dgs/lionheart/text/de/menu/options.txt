@@ -1,4 +1,5 @@
 Schwierigkeit
 Joystick
 Soundtest
+Sprache
 Fertig

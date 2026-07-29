@@ -18,6 +18,9 @@ the original 50 Hz, sound effects and chip music playing.
 | `teavm/tools/pack_assets.py` | Packs the assets into `assets.pak` + `assets.lst` |
 | `sc68/` | The Atari chip music replayer, compiled to WebAssembly |
 | `runtime/` | The page itself and the music player glue |
+| `overlay/` | Files that join the assets for the browser build |
+| `assemble.sh` | Builds and gathers everything into `teavm/target/js` |
+| `serve.py` | Serves that directory, with the range requests the asset pack needs |
 
 The engine side lives in the companion branch of
 [lionengine][engine], module `lionengine-core-web`.
@@ -30,21 +33,16 @@ Needs **JDK 17** (TeaVM rejects newer class files) and
 ```bash
 export JAVA_HOME=/path/to/temurin-17
 
-# 1. engine and game, into the local repository
-cd lionengine && mvn -DskipTests install
-cd ../lionheart-remake && mvn -DskipTests install
-
-# 2. the music replayer (once)
-cd web/sc68 && ./build.sh          # fetches sc68 2.2.1, produces sc68.wasm
-
-# 3. the browser build
-cd ../teavm && mvn -DskipTests package
+cd web/sc68 && ./build.sh    # once: fetches sc68 2.2.1, produces sc68.wasm
+cd ../.. && web/assemble.sh  # engine, game, browser build, assets, page
+python3 web/serve.py         # http://localhost:8800/
 ```
 
-Then assemble the page: `classes.js` from `teavm/target/js`, the files from
-`runtime/`, `sc68.js` and `sc68.wasm` from the replayer build, and the asset
-pack produced by `pack_assets.py`. Serve that directory over HTTP - opening the
-file directly will not work, the page fetches its assets.
+`assemble.sh --quick` skips the asset copy and repack, for a code only change.
+Serving over HTTP is not optional - the page fetches its assets, and it asks for
+the pack in ranges, which `serve.py` answers and a plain `http.server` does not.
+
+Everything under `teavm/target/js` is derived; nothing there is edited by hand.
 
 ## Notes on the port
 

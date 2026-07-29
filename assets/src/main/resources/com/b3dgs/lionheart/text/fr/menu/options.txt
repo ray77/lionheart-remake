@@ -1,4 +1,5 @@
 Difficulté
 Manette
 Test audio
+Langue
 Accepter

@@ -45,10 +45,20 @@ public final class WebLionheart {
     private static final int WIDTH = 1110;
     /** Screen height. */
     private static final int HEIGHT = 624;
+    /** Language key in the address. */
+    private static final String KEY_LANG = "lang=";
+    /** Marker file telling that the assets carry texts for a language. */
+    private static final String LANG_FILE = "lang.txt";
+    /** Key in the address asking for the progress lines. */
+    private static final String KEY_LOG = "log";
+
+    /** Whether progress lines are written, set from the address at startup. */
+    private static boolean logging;
 
 
     public static void main(String[] args) {
         try {
+            logging = hasFlag(urlParams(), KEY_LOG);
             status("fetching index…");
             byte[] listBytes = fetch("assets.lst");
             byte[] pak = fetch("assets.pak");
@@ -70,7 +80,7 @@ public final class WebLionheart {
                     data++;
                 }
             }
-            status(data + " data files unpacked, loading images…");
+            status(data + " data files unpacked, language " + selectLanguage() + ", loading images…");
 
             for (String line : lines) {
                 if (line.length() > 2 && line.charAt(0) == 'I') {
@@ -290,6 +300,69 @@ public final class WebLionheart {
     @JSBody(params = {}, script = "return window.location.search + window.location.hash;")
     private static native String urlParams();
 
+    /** Get the language the browser is set to, as a tag like "de" or "de-DE". */
+    @JSBody(params = {}, script = "return navigator.language || '';")
+    private static native String browserLang();
+
+    /**
+     * Choose the language and write it into the settings.
+     * <p>
+     * The game takes its language from a settings key and falls back to the platform locale when
+     * the key is missing - which is always English here, whatever the browser is set to. Only the
+     * desktop launcher ever loads the settings file, so the key has to be fed in: an explicit
+     * {@code lang} in the address wins, otherwise the browser language, and English if the assets
+     * carry no texts for it. Six languages ship with them, listed in {@code text/langs.txt}.
+     * <p>
+     * Just this one key, not the packed {@code lionheart.properties}: loading the whole file would
+     * switch on every other setting at once - the resolution above all, which this build sets
+     * itself - and the browser build has always run on the defaults.
+     *
+     * @return The chosen language.
+     */
+    private static String selectLanguage() {
+        String lang = readLang(urlParams());
+        if (lang.isEmpty()) {
+            lang = readLang(KEY_LANG + browserLang());
+        }
+        if (!AssetRegistry.exists("text/" + lang + "/" + LANG_FILE)) {
+            lang = "en";
+        }
+        try {
+            com.b3dgs.lionheart.Settings.getInstance()
+                                        .load(new java.io.ByteArrayInputStream(("lang = " + lang).getBytes()));
+        } catch (final java.io.IOException exception) {
+            return "en";
+        }
+        return lang;
+    }
+
+    /**
+     * Read the language following a {@code lang=} key, cut to its two letter part.
+     *
+     * @param url The address.
+     * @return The language, empty when absent.
+     */
+    private static String readLang(String url) {
+        int at = url.indexOf(KEY_LANG);
+        while (at > 0 && url.charAt(at - 1) != '&' && url.charAt(at - 1) != '?' && url.charAt(at - 1) != '#') {
+            at = url.indexOf(KEY_LANG, at + 1);
+        }
+        if (at < 0) {
+            return "";
+        }
+        final int start = at + KEY_LANG.length();
+        int end = start;
+        while (end < url.length() && end - start < 2) {
+            final char c = url.charAt(end);
+            if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z') {
+                end++;
+            } else {
+                break;
+            }
+        }
+        return url.substring(start, end).toLowerCase();
+    }
+
     /**
      * Read the stage number from the address.
      *
@@ -311,14 +384,50 @@ public final class WebLionheart {
         return Integer.parseInt(url.substring(at + 6, end));
     }
 
+    /**
+     * Write a progress line, if the address asked to see them with {@code ?log}.
+     * <p>
+     * Off by default: the loading takes a few seconds and used to leave its notes standing above
+     * the game for the rest of the session. Errors are not affected, those show either way.
+     *
+     * @param msg The line to write.
+     */
     private static void status(String msg) {
+        if (!logging) {
+            return;
+        }
         HTMLDocument doc = Window.current().getDocument();
         HTMLElement out = doc.getElementById("out");
         if (out != null) {
+            out.getStyle().setProperty("display", "block");
             HTMLElement line = doc.createElement("div");
             line.setInnerHTML(msg);
             out.appendChild(line);
         }
+    }
+
+    /**
+     * Check for a bare key in the address, as in {@code ?log} or {@code ?log=true}.
+     *
+     * @param url The address.
+     * @param key The key to look for.
+     * @return <code>true</code> if present as a key of its own.
+     */
+    private static boolean hasFlag(String url, String key) {
+        int at = url.indexOf(key);
+        while (at > 0) {
+            final char before = url.charAt(at - 1);
+            final int after = at + key.length();
+            if ((before == '?' || before == '&' || before == '#')
+                && (after == url.length()
+                    || url.charAt(after) == '&'
+                    || url.charAt(after) == '='
+                    || url.charAt(after) == '#')) {
+                return true;
+            }
+            at = url.indexOf(key, at + 1);
+        }
+        return false;
     }
 
     private WebLionheart() {

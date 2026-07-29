@@ -31,7 +31,12 @@ import com.b3dgs.lionengine.graphic.drawable.SpriteFont;
  */
 final class Choice implements Renderable
 {
-    private static final int MAX_WIDTH = 130;
+    /* A left aligned choice wider than this is pushed left, so that an overlong label keeps its
+     * right edge instead of running into whatever sits beside it. The options screen now ends its
+     * values at the right of the row rather than starting them at a fixed column, so nothing has
+     * to be pushed anywhere: this only needs to stay above the longest label there, German
+     * "Schwierigkeit" at 141 pixels. */
+    private static final int MAX_WIDTH = 160;
 
     /** Horizontal location. */
     private final int x;

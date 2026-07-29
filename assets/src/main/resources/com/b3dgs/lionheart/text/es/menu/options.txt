@@ -1,4 +1,5 @@
 Dificultad
 Mando de
 Reproducir  
+Idioma
 Salir

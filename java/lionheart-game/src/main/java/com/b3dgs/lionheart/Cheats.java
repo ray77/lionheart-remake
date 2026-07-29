@@ -84,6 +84,7 @@ public class Cheats implements Updatable, Renderable
     private boolean paused;
     private boolean pressed;
     private boolean enabled;
+    private boolean allowed;
     private boolean cheatsMenu;
     private boolean fly;
     private boolean invincibility;
@@ -159,6 +160,7 @@ public class Cheats implements Updatable, Renderable
         this.player = player;
         this.difficulty = difficulty;
         enabled = cheats;
+        allowed = cheats;
         tickMouse.stop();
     }
 
@@ -356,7 +358,9 @@ public class Cheats implements Updatable, Renderable
                 paused = false;
                 hud.setPaused(false);
             }
-            else if (device.isFiredOnce(DeviceMapping.PAGE_DOWN))
+            /* Same gate as the menu: the original pause + crouch + page down combination
+             * must not switch the cheats on in a plain run. */
+            else if (allowed && device.isFiredOnce(DeviceMapping.PAGE_DOWN))
             {
                 device.isFiredOnce(DeviceMapping.CHEAT);
                 enabled = !enabled;
@@ -393,7 +397,11 @@ public class Cheats implements Updatable, Renderable
                 tickMouse.restart();
                 sequencer.setSystemCursorVisible(true);
             }
-            if (deviceCursor.isFiredOnce(DeviceMapping.RIGHT))
+            /* Only a run started with cheats gets the menu. Otherwise anyone can open it
+             * mid game, jump to the last stage and hand in the score that comes with it.
+             * The cursor handling above stays outside the check - it hides the pointer
+             * during normal play and has nothing to do with the cheats. */
+            if (allowed && deviceCursor.isFiredOnce(DeviceMapping.RIGHT))
             {
                 cheatsMenu = true;
                 cursor.setInputDevice(null);

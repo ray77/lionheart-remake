@@ -16,7 +16,9 @@
  */
 package com.b3dgs.lionheart.menu;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -58,7 +60,19 @@ public class MenuGame extends Menu<Type>
 {
     private static final int MENU_MAIN_IMAGE_OFFSET_Y = 32;
     private static final int OPTIONS_TITLE_OFFSET_Y = 96;
-    private static final int OPTIONS_TEXT_OFFSET_X = 12;
+    /* One row per option, and the half width the oval frame actually leaves at that height -
+     * measured off menu2.png, which narrows towards top and bottom. The label starts at the left
+     * end of its row, the value ends at the right end, so the two grow apart from each other
+     * instead of meeting at a fixed column. That is what makes the long translations fit:
+     * German "Schwierigkeit" is 141 pixels against 100 for English "Difficulty", and together
+     * with its value it needs 250 of the 280 this leaves it. */
+    private static final int[] OPTIONS_ROW_Y = {132, 159, 186, 213};
+    private static final int[] OPTIONS_ROW_HALF = {140, 148, 148, 126};
+    private static final int OPTIONS_DONE_Y = 243;
+    /** Line of main.txt holding the options label, used as the title of this screen. */
+    private static final int TITLE_LINE = 2;
+    /** File listing the languages the assets carry texts for. */
+    private static final String FILE_LANGS = "langs.txt";
     /** Logger. */
     private static final Logger LOGGER = LoggerFactory.getLogger(MenuGame.class);
 
@@ -69,6 +83,7 @@ public class MenuGame extends Menu<Type>
     private final List<String> difficulty1 = getText("difficulties.txt");
     private final List<String> joystick1 = getText("joystick.txt");
     private final List<String> music1 = getText("music.txt");
+    private final List<String> language1 = getLanguages();
 
     private final ImageBuffer[] bufferTextOptions;
 
@@ -78,6 +93,8 @@ public class MenuGame extends Menu<Type>
     private int joystick;
     /** Current music test. */
     private int music = 1;
+    /** Current language index. */
+    private int language;
     /** Music player. */
     private Audio audio;
 
@@ -96,13 +113,15 @@ public class MenuGame extends Menu<Type>
 
         difficulty = Util.getDifficultyIndex(config);
         joystick = config.isOneButton() ? 0 : 1;
+        language = Math.max(0, language1.indexOf(settings.getLang().toUpperCase(Locale.ENGLISH)));
 
         menusData[0] = createMain();
         menusData[1] = createOptions();
 
         type = Type.MAIN;
 
-        bufferTextOptions = new ImageBuffer[difficulty1.size() + joystick1.size() + music1.size()];
+        bufferTextOptions =
+            new ImageBuffer[difficulty1.size() + joystick1.size() + music1.size() + language1.size()];
     }
 
     /**
@@ -114,6 +133,54 @@ public class MenuGame extends Menu<Type>
         i = Util.cacheText(difficulty1, i, bufferTextOptions, textBlue);
         i = Util.cacheText(joystick1, i, bufferTextOptions, textBlue);
         i = Util.cacheText(music1, i, bufferTextOptions, textBlue);
+        i = Util.cacheText(language1, i, bufferTextOptions, textBlue);
+    }
+
+    /**
+     * Read the languages the assets carry texts for.
+     *
+     * @return The language codes, upper case as they are shown.
+     */
+    private static List<String> getLanguages()
+    {
+        final List<String> codes = Util.readLines(Medias.create(Folder.TEXT, FILE_LANGS));
+        final List<String> shown = new ArrayList<>(codes.size());
+        for (int i = 0; i < codes.size(); i++)
+        {
+            final String code = codes.get(i).trim();
+            if (!code.isEmpty())
+            {
+                shown.add(code.toUpperCase(Locale.ENGLISH));
+            }
+        }
+        return shown;
+    }
+
+    /**
+     * Switch to the chosen language, if it is not the one already running.
+     * <p>
+     * Every text of the menu is read once when it is built, so the whole menu is started over -
+     * there is no cheaper way to have the labels, the option values and the cached text images
+     * come back in the new language. That is also why this waits for the player to accept
+     * instead of firing while they step through the list.
+     */
+    private void applyLanguage()
+    {
+        final String code = language1.get(language).toLowerCase(Locale.ENGLISH);
+        if (code.equals(settings.getLang()))
+        {
+            return;
+        }
+        try
+        {
+            settings.load(new ByteArrayInputStream((Settings.LANG + " = " + code).getBytes()));
+        }
+        catch (final IOException exception)
+        {
+            LOGGER.error("language error", exception);
+            return;
+        }
+        end(MenuGame.class, config);
     }
 
     /**
@@ -160,13 +227,23 @@ public class MenuGame extends Menu<Type>
     private Data createOptions()
     {
         final int x = (int) Math.round(CENTER_X * factorH);
-        final Choice[] choices =
+        final Choice[] choices = new Choice[OPTIONS_ROW_Y.length + 1];
+        for (int i = 0; i < OPTIONS_ROW_Y.length; i++)
         {
-            new Choice(textDark, textWhite, options1.get(0), x - 118, mainY + 125, Align.LEFT),
-            new Choice(textDark, textWhite, options1.get(1), x - 118, mainY + 161, Align.LEFT),
-            new Choice(textDark, textWhite, options1.get(2), x - 118, mainY + 197, Align.LEFT),
-            new Choice(textDark, textWhite, options1.get(3), x, mainY + 241, Align.CENTER, Type.MAIN)
-        };
+            choices[i] = new Choice(textDark,
+                                    textWhite,
+                                    options1.get(i),
+                                    x - OPTIONS_ROW_HALF[i],
+                                    mainY + OPTIONS_ROW_Y[i],
+                                    Align.LEFT);
+        }
+        choices[OPTIONS_ROW_Y.length] = new Choice(textDark,
+                                                   textWhite,
+                                                   options1.get(OPTIONS_ROW_Y.length),
+                                                   x,
+                                                   mainY + OPTIONS_DONE_Y,
+                                                   Align.CENTER,
+                                                   Type.MAIN);
         return new Data(choices);
     }
 
@@ -187,6 +264,12 @@ public class MenuGame extends Menu<Type>
         {
             music = changeOption(music, 0, music1.size() - 1);
             handleOptionMusic();
+        }
+        else if (choice == 3)
+        {
+            /* Only the shown value changes here. Switching on every press would restart the
+             * menu under the player's hands, so it happens once, on accepting. */
+            language = changeOption(language, 0, language1.size() - 1);
         }
     }
 
@@ -265,11 +348,12 @@ public class MenuGame extends Menu<Type>
                        (int) Math.round(CENTER_X * factorH),
                        mainY + OPTIONS_TITLE_OFFSET_Y,
                        Align.CENTER,
-                       menu1.get(menusData[1].choiceMax == 4 ? 1 : 2).toUpperCase(Locale.ENGLISH));
+                       menu1.get(TITLE_LINE).toUpperCase(Locale.ENGLISH));
 
-        drawOptionText(g, 0, 0, difficulty);
-        drawOptionText(g, 1, difficulty1.size(), joystick);
-        drawOptionText(g, 2, difficulty1.size() + joystick1.size(), music);
+        drawOptionText(g, 0, 0, difficulty, difficulty1);
+        drawOptionText(g, 1, difficulty1.size(), joystick, joystick1);
+        drawOptionText(g, 2, difficulty1.size() + joystick1.size(), music, music1);
+        drawOptionText(g, 3, difficulty1.size() + joystick1.size() + music1.size(), language, language1);
     }
 
     /**
@@ -280,10 +364,15 @@ public class MenuGame extends Menu<Type>
      * @param start The option start.
      * @param value The option value.
      */
-    private void drawOptionText(Graphic g, int index, int start, int value)
+    private void drawOptionText(Graphic g, int index, int start, int value, List<String> texts)
     {
+        /* Measured off the text, not off the buffer: Util.cacheText gives every one of them the
+         * same fixed size and leaves the rest transparent, so the buffer width says nothing about
+         * where the writing ends. */
         g.drawImage(bufferTextOptions[start + value],
-                    (int) Math.round(CENTER_X * factorH) + OPTIONS_TEXT_OFFSET_X,
+                    (int) Math.round(CENTER_X * factorH)
+                                          + OPTIONS_ROW_HALF[index]
+                                          - textBlue.getTextWidth(texts.get(value)),
                     menusData[1].choices[index].getY());
     }
 
@@ -372,6 +461,10 @@ public class MenuGame extends Menu<Type>
         if (type == Type.NEW || type == Type.INTRO)
         {
             setSystemCursorVisible(false);
+        }
+        if (this.type == Type.OPTIONS)
+        {
+            applyLanguage();
         }
     }
 

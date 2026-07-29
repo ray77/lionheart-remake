@@ -1,4 +1,5 @@
 Dificuldade
 Joystick
 Teste de som
+Idioma
 Confirmar
