@@ -3,6 +3,7 @@ package probe;
 import org.teavm.interop.Async;
 import org.teavm.interop.AsyncCallback;
 import org.teavm.jso.JSBody;
+import org.teavm.jso.JSByRef;
 import org.teavm.jso.JSExceptions;
 import org.teavm.jso.JSObject;
 import org.teavm.jso.ajax.XMLHttpRequest;
@@ -95,7 +96,16 @@ public final class WebLionheart {
                 if (line.length() > 2 && line.charAt(0) == 'I') {
                     String path = line.substring(2);
                     HTMLImageElement img = (HTMLImageElement) doc.createElement("img");
-                    if (awaitImage(img, ASSETS + path)) {
+                    /* Out of the pack, not off the server: the bytes are already here. Falls back
+                     * to the loose file for anything the pack happens not to carry. */
+                    final byte[] raw = AssetRegistry.get(path);
+                    final boolean packed = raw != null && raw.length > 0;
+                    final String src = packed ? blobUrl(raw, raw.length) : ASSETS + path;
+                    final boolean ok = awaitImage(img, src);
+                    if (packed) {
+                        revokeUrl(src);
+                    }
+                    if (ok) {
                         FactoryGraphicWeb.registerImage(path, img);
                         images++;
                     }
@@ -166,6 +176,26 @@ public final class WebLionheart {
                      + "  try { window.onLionheartProgress('data', e.loaded,"
                      + "        e.lengthComputable ? e.total : 0); } catch (err) {} } };")
     private static native void watchProgress(JSObject request);
+
+    /**
+     * Wrap bytes already in memory in an address an image element can be pointed at.
+     * <p>
+     * Every picture is in the pack that has just been fetched - the engine reads their headers
+     * from there. Fetching each one a second time over the network only to have the browser
+     * decode it cost 669 requests and, measured against the live server, close to seventeen
+     * seconds of doing nothing but waiting. From a blob it is the same decode without the wait.
+     *
+     * @param data The bytes.
+     * @param size How many of them.
+     * @return The address, to be given back to {@link #revokeUrl(String)} once decoded.
+     */
+    @JSBody(params = {"data", "size"},
+            script = "return URL.createObjectURL(new Blob([new Uint8Array(data.buffer, data.byteOffset, size)]));")
+    private static native String blobUrl(@JSByRef byte[] data, int size);
+
+    /** Let go of a blob address. The decoded picture stays. */
+    @JSBody(params = "url", script = "URL.revokeObjectURL(url);")
+    private static native void revokeUrl(String url);
 
     /** Load an image, suspending until it is decoded. */
     @Async

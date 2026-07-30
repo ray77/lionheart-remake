@@ -31,7 +31,10 @@ canvas{image-rendering:pixelated;background:#000;border:1px solid #22d3ee44}
 </div>
 <div id="out"></div>
 <div id="err"></div>
-<canvas id="lionengine" width="640" height="480"></canvas>
+<!-- tabindex, weil Safari einem Klick auf ein nicht fokussierbares Element
+     keinen Tastaturfokus gibt - in einem iframe blieben die Pfeile sonst bei
+     der Elternseite haengen. -->
+<canvas id="lionengine" width="640" height="480" tabindex="-1"></canvas>
 <script>
   // Show only the errors of THIS run
   (function(){
