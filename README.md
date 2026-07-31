@@ -1,3 +1,5 @@
+![Lionheart running in the browser](web/lionheart-browser.jpg)
+
 # ▶ Play Lionheart in your browser
 
 **This fork adds a browser version of Lionheart Remake** — the full game, compiled
