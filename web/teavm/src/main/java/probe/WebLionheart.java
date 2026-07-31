@@ -413,8 +413,13 @@ public final class WebLionheart {
             lang = "en";
         }
         try {
+            /* Music at 40, as the desktop settings have always had it. Without this the
+               browser runs the sc68 tracks at full scale - they drown the effects and
+               were reported as painfully loud. Fed here because only the desktop
+               launcher ever loads the settings file. */
             com.b3dgs.lionheart.Settings.getInstance()
-                                        .load(new java.io.ByteArrayInputStream(("lang = " + lang).getBytes()));
+                                        .load(new java.io.ByteArrayInputStream(
+                                            ("lang = " + lang + "\nvolume.music = 40").getBytes()));
         } catch (final java.io.IOException exception) {
             return "en";
         }
