@@ -15,7 +15,9 @@ six languages and a score system, straight in the page.
 > [original repository](https://github.com/b3dgs/lionheart-remake); if you enjoy the
 > game, that is where the credit belongs. This fork only teaches it to run in a browser.
 
-- **Play it now:** [arcade4ever.net](https://arcade4ever.net/games/lionheart/index.html) (free, with an online leaderboard on the site)
+- **Play it now, no account needed:** [arcade4ever.net/lionheart](https://arcade4ever.net/lionheart/) —
+  the plain game, free
+- **Play with an online leaderboard:** [arcade4ever.net](https://arcade4ever.net/public/play/lionheart.php)
 - **Download a release:** [lionheart-web.zip](https://github.com/ray77/lionheart-remake/releases) — unpack, serve, play
 - **How the port works:** [`web/README.md`](web/README.md) — TeaVM pitfalls, the new
   `lionengine-core-web` backend, build instructions
