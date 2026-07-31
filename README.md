@@ -8,6 +8,13 @@ no JVM, no emulator: the Amiga classic runs at 60 fps with its logic at the
 original 50 Hz, Atari sc68 chip music played through WebAssembly, sound effects,
 six languages and a score system, straight in the page.
 
+> **The game itself is the work of [Pierre-Alexandre / Byron 3D Games Studio](https://www.b3dgs.com)** —
+> a decade-plus labour of love recreating the 1993 Thalion classic, together with
+> the [LionEngine](https://github.com/b3dgs/lionengine) it runs on. Visit the
+> [official project site](https://lionheart.b3dgs.com) and the
+> [original repository](https://github.com/b3dgs/lionheart-remake); if you enjoy the
+> game, that is where the credit belongs. This fork only teaches it to run in a browser.
+
 - **Play it now:** [arcade4ever.net](https://arcade4ever.net/games/lionheart/index.html) (free, with an online leaderboard on the site)
 - **Download a release:** [lionheart-web.zip](https://github.com/ray77/lionheart-remake/releases) — unpack, serve, play
 - **How the port works:** [`web/README.md`](web/README.md) — TeaVM pitfalls, the new
