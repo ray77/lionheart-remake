@@ -416,10 +416,14 @@ public final class WebLionheart {
             /* Music at 40, as the desktop settings have always had it. Without this the
                browser runs the sc68 tracks at full scale - they drown the effects and
                were reported as painfully loud. Fed here because only the desktop
-               launcher ever loads the settings file. */
+               launcher ever loads the settings file.
+               Two separate loads, one key each: TeaVM's Properties.load does NOT
+               split on a newline - a two-line string made the language literally
+               "de\nvolume.music = 40", and every text path broke on it. */
             com.b3dgs.lionheart.Settings.getInstance()
-                                        .load(new java.io.ByteArrayInputStream(
-                                            ("lang = " + lang + "\nvolume.music = 40").getBytes()));
+                                        .load(new java.io.ByteArrayInputStream(("lang = " + lang).getBytes()));
+            com.b3dgs.lionheart.Settings.getInstance()
+                                        .load(new java.io.ByteArrayInputStream("volume.music = 40".getBytes()));
         } catch (final java.io.IOException exception) {
             return "en";
         }
